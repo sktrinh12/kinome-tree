@@ -216,11 +216,10 @@ defaultpalette = colorRampPalette( c(
 
 source("lib/Rename.R")
 
-HGNC <- data.table(read_excel("data-input/HGNC-protein-coding-genes.xlsx"))
-#setDT(HGNC)
+HGNC <- data.table(read_excel("data-input/HGNC-protein-coding-genes.xlsx")) %>% 
+				mutate(SYMBOL_UPPER = stringr::str_to_upper(SYMBOL))
 
 manual_map <- data.table(read_excel("data-input/manual-map.xlsx"))
-#setDT(manual_map)
 
 # 
 ui <- dashboardPage(
@@ -246,11 +245,10 @@ ui <- dashboardPage(
                         box(
                             width = 4,
                             numericInput(inputId = "cutoff", label = "Remove Values Less Than", 50),
-                            textInput(inputId = "atpfilter", label = "Remove Value from ATP Column", value = "Cascade")
+                            textInput(inputId = "kinasefilter", label = "Remove Value from Just_Kinase Column", value = "Cascade")
                         )
                     ),
                     tabBox(
-                        #title = "Files",
                         id = "filetabs",
                         width = 12,
                         selected = "Input File",
@@ -269,14 +267,6 @@ ui <- dashboardPage(
                     )
             ),
             tabItem("chart",
-                # box(
-                #     width = 8,
-                #     plotOutput("distPlot")
-                # ),
-                # box(
-                #     width = 4,
-                #     numericInput(inputId = "bins", label = "Number of Bins", value = 4, min = 0, step = 1)
-                # ),
                 box(
                     width = 10,
                     div(id="treediv")
@@ -291,7 +281,6 @@ ui <- dashboardPage(
                   numericInput(inputId = "nodesizemax", label = "Node Size Max", value = 60),
                   numericInput(inputId = "nodelabelfontsize", label = "Node Label Font Size", value = 0),
                   textInput(inputId = "nodelabelcolor", label = "Node Label Color (default #999999)", value = "#999999"),
-                  #selectInput(inputId = "nodecolors", label = "Node Color", choices = c("red", "gray", "teal")),
                   textInput(inputId = "nodecolor", label = "Node Color (default #db0606)", value = "#db0606"),
                   textInput(inputId = "nodeoutlinecolor", label = "Node Outline Color (default #a80606)", value = "#a80606"),
                   numericInput(inputId = "nodeopacity", label = "Node Opacity (default 50%)", value = 50, min = 0, max = 100, step = 5)
@@ -325,7 +314,7 @@ server <- function(input, output, session) {
     kinaseDataCleaned <- reactive({
         req(input$kinasefile)
         
-        dt <- setDT(clean_kinase_data(HGNC, kinaseData(), manual_map))
+        dt <- clean_kinase_data(HGNC, kinaseData(), manual_map)
         
         return(dt)
     })
@@ -334,7 +323,7 @@ server <- function(input, output, session) {
         req(input$kinasefile)
         
       
-        return(kinaseDataCleaned()[Result >= input$cutoff & ATP != input$atpfilter])
+        return(kinaseDataCleaned()[Result >= input$cutoff & Just_Kinase != input$kinasefilter])
     })
     
     output$kinasetable <- renderDataTable({
@@ -377,7 +366,6 @@ server <- function(input, output, session) {
     )
     
     outputjson      = tempfile(pattern="kinome_tree",tmpdir="www/json",fileext = ".json") # session specific json file describing network
-    #outputjsonshort = paste("json/",strsplit(outputjson,split = "/")[[1]][3],sep="") # used to communicate to js
     subdffile       = tempfile(pattern="subdf",tmpdir="tempfiles",fileext = ".txt") # temp file used to make json file
     svgoutfile      = tempfile(pattern="kintreeout",tmpdir="tempfiles",fileext = ".svg") # session specific tree svg file
     
@@ -389,155 +377,60 @@ server <- function(input, output, session) {
         tempdf = svginfo$dataframe
         
         # set font family
-        #tempdf$text.font = paste("'",input$fontfamilyselect,"'",sep="")
         tempdf$text.font = paste("'","Arial","'",sep="")
         
-        # establish legend
+        # establish legend (NOT USED)
         legend = c()
-        # Set initial yoffset
-        yoffset = 79.125
-        
-        # get current values
-        tempdf$text.size = 4 #input$fontsize
-        
-        # Single branch color
-        #if (input$branchcolortype == "Uniform")
-        #{
-            tempdf$branch.col = BG_col1 #input$col_branch_single
-        #}
         
         # ------------------ NODE COLOR ------------------ #
         
-            # set colors based on selected ids
-            selkinases = ""
-              
-            #selkinases = unlist(strsplit(split = "\n",x=input$KinasesManualNodeText))
-            selkinases = kinaseDataCleanedFiltered()$HGNC_Symbol
-              
-            selkinasescoral = ""
-            tempdf$node.selected = -1
-              
-              if (length(selkinases) > 0)
-              {
-                # convert selected to coral ids
-                kinasestoconvert = data.frame(kin1=selkinases,kin2=selkinases)
-                selkinasesconverted = convertID (tempdf,kinasestoconvert,inputtype="HGNC") #input$NodeManualIDtype)
-                
-                if (nrow(selkinasesconverted) > 0)
-                {
-                  selkinasescoral = selkinasesconverted[,1]
-                }
-                
-                # note them as selected so we can add them to the top of the plot later
-                tempdf$node.selected[which(tempdf$id.coral %in% selkinasescoral)] = 1
-              }
+				# set colors based on selected ids
+				kdata = kinaseDataCleanedFiltered()
+				coral.ids <- tempdf %>%
+								mutate(filter.flag = ifelse(id.HGNC %in% kdata$HGNC_SYMBOL, T, F)) %>%
+								filter(filter.flag == T) %>%
+								select(id.coral) %>%
+								pull()
+				print(coral.ids)
+				print(paste0(rep("-",20), collapse=""))
 
-              # recolor based on selection
-              #tempdf$node.col =  color.by.selected(df = tempdf, sel = selkinasescoral, bg.col  = input$col_node_bg,  sel.col = input$col_sel_node)
-              tempdf$node.col =  color.by.selected(
-                df = tempdf, 
-                sel = selkinasescoral, 
-                bg.col  = BG_col1, #input$col_node_bg,  
-                sel.col = input$nodecolor #Cor_col #input$col_sel_node
-              )
-             
-              # # build legend for Node Color (Manual Selection)
-              # lines_and_offset = build.group.legend(yoffset=yoffset,groupslabels=c(input$node_select_label,input$node_nonselect_label),groupcolors=c(input$col_sel_node,input$col_node_bg),elementtype = "Node",fontfamily = input$fontfamilyselect)
-              # lines = lines_and_offset[[1]]
-              # yoffset = lines_and_offset[[2]] + 14
-              # legend = c(legend,lines)
-            #}        
-
-        
         # ------------------ NODE SIZE ------------------ #
         
-        # color nodes by single color
-print(input$plotresultcolumn)            
-result <- input$plotresultcolumn
-            resizedf = data.frame(kinaseDataCleanedFiltered()[, c("HGNC_Symbol", result), with = FALSE])#input$plotresultcolumn
-print(resizedf)
-            # convert to coral id
-            resizedf = convertID (tempdf, resizedf, inputtype = "HGNC") #inputtype=input$nodesizeValueIDtype)
+				print(input$plotresultcolumn)        
+				sel_colm <- input$plotresultcolumn # either bin10, bin25 or result (drop down menu)
+				resizedf <- kdata %>% 
+												select(HGNC_SYMBOL, !!sel_colm) %>%
+												arrange(HGNC_SYMBOL) %>%
+												mutate(KINASE = coral.ids)
+				print(resizedf)
 
-            if (nrow(resizedf)>0)
-            {
-                radii_and_mapping = resizes.by.value(
-                    df = tempdf, 
-                    resizedf = resizedf, 
-                    sizerange = c(input$nodesizemin, input$nodesizemax),  #c(1, 60), #input$nodesizeValueslider,
-                    controlledrange = FALSE, #input$Manuallysetdatarange, 
-                    minvalue = 1, #input$nodesizevaluemin, 
-                    maxvalue = 1, #input$nodesizevaluemax,
-                    showall = "hide" #input$nodesizefornotprovidedquantitative
-                )
-                
-                # Get correct limits for legend
-                    minvalforlegend = 1 #input$nodesizevaluemin
-                    maxvalforlegend = 10 #input$nodesizevaluemax
-                
-                tempdf$node.radius     = radii_and_mapping[[1]]
-                tempdf$node.val.radius = radii_and_mapping[[2]]
-                
-                # add legend info
-                # lines_and_offset = build.nodesize.legend (
-                #     yoffset=yoffset,
-                #     minval=minvalforlegend,
-                #     maxval=maxvalforlegend,
-                #     minsize = 1, #input$nodesizeValueslider[1],
-                #     maxsize = 60, #input$nodesizeValueslider[2],
-                #     fontfamily = "Arial", #input$fontfamilyselect, 
-                #     subtitle= "", #input$quantvaluenamenodesize
-                # )
-                # 
-                # lines = lines_and_offset[[1]]
-                # yoffset = lines_and_offset[[2]] + 14
-                # #if (input$includelegend == TRUE)
-                # #{
-                #     legend = c(legend,lines)
-                # #}
-                #legend = c(legend,lines)
-            }
-        #}
+				if (nrow(resizedf)>0)
+				{
+				radii_and_mapping = resizes.by.value(
+						df = tempdf, 
+						resizedf = resizedf, 
+						sizerange = c(input$nodesizemin, input$nodesizemax),  #c(1, 60) 
+						controlledrange = FALSE, 
+						minvalue = 0, 
+						maxvalue = 100, 
+						showall = "hide",
+				    sel_colm
+				)
+				}
         
         # ------------------ ADVANCED OPTIONS ------------------ #
         
-        tempdf$node.opacity = input$nodeopacity/100 #0.5 #input$Node_Opacity
-        
-        # text color
-        
         # Change Color and Size of Font for Selected kinases
-
-            #selkinases = unlist(strsplit(split = "\n",x=input$KinasesManualLabelsText))
-            selkinases = kinaseDataCleanedFiltered()$HGNC_Symbol
-            
-            selkinasescoral = ""
-            if (length(selkinases) > 0)
-            {
-                # convert selected to coral ids
-                kinasestoconvert = data.frame(kin1=selkinases,kin2=selkinases)
-                #selkinasesconverted = convertID (tempdf,kinasestoconvert,inputtype=input$labelsManualIDtype)
-                selkinasesconverted = convertID (tempdf,kinasestoconvert,inputtype = "HGNC")
-                if (nrow(selkinasesconverted) > 0)
-                {
-                    selkinasescoral = selkinasesconverted[,1]
-                }
-            }
-            
-            # set background color and font size
-            tempdf$text.col = BG_col1 #input$fontcolorbackground
-            tempdf$text.size = 0 #input$fontsizebackground
-            
-            # set selected font color and size
-            tempdf$text.col[which(tempdf$id.coral %in% selkinasescoral)]  = input$nodelabelcolor #"#000000" #input$fontcolorselection
-            tempdf$text.size[which(tempdf$id.coral %in% selkinasescoral)] = input$nodelabelfontsize #input$fontsizeselection
-        #}
-        
-        
-        
-        # Node stroke color
-
-            tempdf$node.strokecol = input$nodeoutlinecolor #"#a80606" #input$nodestrokecol
-        
+				tempdf <- tempdf %>% mutate(node.selected = ifelse(id.coral %in% coral.ids, 1, -1),
+										node.col = ifelse(node.selected == 1, input$nodecolor, BG_col1),
+										node.radius = radii_and_mapping[[1]],
+										node.val.radius = radii_and_mapping[[2]],
+										text.col = ifelse(node.selected == 1, input$nodelabelcolor, BG_col1), # set selected font color and size
+										text.size = ifelse(node.selected == 1, input$nodelabelfontsize, 0), 
+										node.strokecol = input$nodeoutlinecolor, #a80606 Node stroke color
+										node.opacity = input$nodeopacity/100,
+									  branch.col = BG_col1
+								    ) 
         return(list(tempdf,legend))
     }) # end reactive
     
@@ -558,8 +451,14 @@ print(resizedf)
         }
         
         # Write SVG file
-        #writekinasetree(svginfo,destination=svgoutfile,font=input$fontfamilyselect,labelselect=input$kinaselabelselect,groupcolor = input$groupcolorchoose)
-        writekinasetree(svginfo, destination = svgoutfile, font="Arial", labelselect = "HGNC", groupcolor = "#000000", titley = input$titley, titlefontsize = input$titlefontsize)
+        writekinasetree(svginfo, 
+												destination = svgoutfile, 
+												font="Arial", 
+												labelselect = "HGNC", 
+												groupcolor = "#000000", 
+												titley = input$titley, 
+												titlefontsize = input$titlefontsize
+												)
         
         # Render SVG
         svgPanZoom(svgoutfile, viewBox = F, controlIconsEnabled=F)
