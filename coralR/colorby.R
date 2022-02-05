@@ -94,60 +94,77 @@ color.by.value <- function(df ,recolordf ,colors  ,heatrange , bg.col="#D3D3D3")
   return (list(color.vector, value.vector))  
 }
 
-
-# Define a function creates radius vector from values
-resizes.by.value <- function(df, resizedf, sizerange, controlledrange = FALSE, minvalue=0, maxvalue = 5,showall="show")
-{
+resizes.by.value <- function(df, 
+														 resizedf, 
+														 sizerange, # size range = c(1,60) == (min, max)
+														 controlledrange = FALSE, 
+														 minvalue = 5, 
+														 maxvalue = 60,
+														 showall ="show", 
+														 sel_colm
+												    )
+ {
   # set values for non supplied kinases
   radius.vector = rep(0,nrow(df))
-  if (showall == "show"){radius.vector = rep(sizerange[1],nrow(df))}
+  if (showall == "show") {
+				radius.vector = rep(sizerange[1],nrow(df)) # all min values repeated
+  } 
   
   # keep track of group labels
   value.vector = rep(NA,nrow(df))
-  
+
+  # print(head(resizedf))
+
   # convert to numeric
-  resizedf[,2] = as.numeric(resizedf[,2])
+  tmp <- lapply(resizedf, typeof)
+
+  if (tmp[[sel_colm]] != "double") {
+      resizedf[[sel_colm]] = as.numeric(resizedf[[sel_colm]])
+      }
   
   if (controlledrange == FALSE)
   {
     # (1) get range
     rangesize = sizerange[2] - sizerange[1]
     
-    minvalue = min(resizedf[,2])
-    maxvalue = max(resizedf[,2])
+    minvalue = 0
+    maxvalue = 100
   }
   
-  # if controlledrange == TRUE
   if (controlledrange == TRUE)
   {
     # truncate values beyond the range
-    resizedf[,2][which(resizedf[,2] < minvalue)] = minvalue
-    resizedf[,2][which(resizedf[,2] > maxvalue)] = maxvalue
+    resizedf[[sel_colm]][which(resizedf[[sel_colm]] < minvalue)] = minvalue
+    resizedf[[sel_colm]][which(resizedf[[sel_colm]] > maxvalue)] = maxvalue
     
     # (1) get range
     rangesize = sizerange[2] - sizerange[1]
   }
 
   # (2) shift values such that they start at zero
-  radii = resizedf[,2] - minvalue
+  # no need since alwasy at zero
+  radii = resizedf[[sel_colm]]
   
   # (3) scale so max = 1
-  radii[which(radii !=0)] = radii[which(radii !=0)] / maxvalue
+  radii = radii / maxvalue
   
   # (3) multiply to fit range
   radii = radii * rangesize
   
   # (4) increase all values to be within range
-  radii = radii+ sizerange[1]
+  # radii = radii + sizerange[1]
   
   resizedf$radii = radii
   
   # find indices to resize
-  dflookup = match(resizedf[,1],df[,1])
+  dflookup = match(resizedf$KINASE,df$id.coral)
   
   # update colors and values
+  print(radii)
+  print(paste0(rep("-", 20), collapse = ""))
+  print(dflookup)
   radius.vector[dflookup] = resizedf$radii
-  value.vector[dflookup] = resizedf[,2]
+  value.vector[dflookup] = resizedf[[sel_colm]]
   
   return (list(radius.vector, value.vector))  
 }
