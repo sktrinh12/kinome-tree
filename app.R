@@ -33,10 +33,11 @@ source("coralR/readinput.R")
 source("coralR/writekinasetree.R")
 source("coralR/legendfunctions.R")
 source("coralR/map2color.R")
-source("coralR/convertID.R")
+# source("coralR/convertID.R")
 source("coralR/makejson.R")
 source("coralR/colors.R")
 source("coralR/radiobuttonswithimages.R")
+source("lib/Rename.R")
 
 #---------------------- READ IN AND ORGANIZE DATA ----------------------#
 
@@ -214,7 +215,6 @@ defaultpalette = colorRampPalette( c(
 #XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 
-source("lib/Rename.R")
 
 HGNC <- data.table(read_excel("data-input/HGNC-protein-coding-genes.xlsx")) %>% 
 				mutate(SYMBOL_UPPER = stringr::str_to_upper(SYMBOL))
@@ -280,9 +280,12 @@ ui <- dashboardPage(
                   numericInput(inputId = "nodesizemin", label = "Node Size Min", value = 5),
                   numericInput(inputId = "nodesizemax", label = "Node Size Max", value = 60),
                   numericInput(inputId = "nodelabelfontsize", label = "Node Label Font Size", value = 0),
-                  textInput(inputId = "nodelabelcolor", label = "Node Label Color (default #999999)", value = "#999999"),
-                  textInput(inputId = "nodecolor", label = "Node Color (default #db0606)", value = "#db0606"),
-                  textInput(inputId = "nodeoutlinecolor", label = "Node Outline Color (default #a80606)", value = "#a80606"),
+                  # textInput(inputId = "nodelabelcolor", label = "Node Label Color (default #999999)", value = "#999999"),
+                  # textInput(inputId = "nodecolor", label = "Node Color (default #db0606)", value = "#db0606"),
+                  colourInput('nodelabelcolor', 'Node Label Colour', "#1A1818"),
+                  colourInput('nodecolor', 'Node Colour', "#db0606"),
+                  # textInput(inputId = "nodeoutlinecolor", label = "Node Outline Color (default #a80606)", value = "#a80606"),
+                  colourInput('nodeoutlinecolor', 'Node Outline Colour', "#a80606"),
                   numericInput(inputId = "nodeopacity", label = "Node Opacity (default 50%)", value = 50, min = 0, max = 100, step = 5)
                 ),
                 box(
@@ -314,8 +317,7 @@ server <- function(input, output, session) {
     kinaseDataCleaned <- reactive({
         req(input$kinasefile)
         
-        dt <- clean_kinase_data(HGNC, kinaseData(), manual_map)
-        
+        dt <- clean_kinase_data(HGNC, kinaseData(), manual_map, input$cutoff, input$kinasefilter)
         return(dt)
     })
     
@@ -323,7 +325,7 @@ server <- function(input, output, session) {
         req(input$kinasefile)
         
       
-        return(kinaseDataCleaned()[Result >= input$cutoff & Just_Kinase != input$kinasefilter])
+        return(kinaseDataCleaned())
     })
     
     output$kinasetable <- renderDataTable({
