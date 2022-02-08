@@ -54,16 +54,31 @@ map_regex_match <- function(df, HGNC, i) {
     return(NA)
 }
 
+get.hgnc.id <- function(HGNC, pattern ) {
+    d <- HGNC %>% 
+								filter(grepl(x = SYMBOL, pattern = paste0("^", pattern, "$"))) %>% 
+								select(HGNC_ID) %>% 
+								pull() 
+    # print(d)
+    if (length(d) > 1) {
+        return("")
+        }
+    return(d)
+    }
 
-clean_kinase_data <- function(HGNC, kinasedata, manual_map) {
+clean_kinase_data <- function(HGNC, kinasedata, manual_map, cutoff, kinasefilter) {
 
 				ht <- HGNC %>%
 						select(SYMBOL_UPPER, HGNC_ID, SYMBOL) 
 
+				cutoff <- as.integer(cutoff)
+
 				df <- kinasedata %>% 
 						arrange(Kinase) %>%
-						filter(!grepl(pattern = "\\[", x = Kinase), 
-									 !grepl(pattern = "/", x = Kinase),
+						filter(Result >= cutoff,
+								   !grepl(pattern = "\\[", x = Kinase), 
+								   !grepl(pattern = "^(?!.*\\/).*\\(.*\\)$", x = Kinase, perl=T),
+									 # !grepl(pattern = "/", x = Kinase),
 									 !grepl(pattern = "-", x = Kinase)) %>%
 						mutate(No_Greek =  case_when(
 							Kinase == "α" ~ "A",
@@ -84,19 +99,43 @@ clean_kinase_data <- function(HGNC, kinasedata, manual_map) {
 						separate(No_Space, into = c('sp1', 'sp2', 'sp3'), extra = 'drop', remove = FALSE, fill="right") %>%
 						merge(ht, by.x = 'Just_Kinase', by.y = 'SYMBOL_UPPER', all.x = TRUE, all.y = FALSE)
 
+				# find rows that have multiple split strings & add index column for counting
+				# primarily aiming for strings like, 'CAPK/ALK3'
+				dtt <- df %>% 
+								filter(!is.na(sp2) | !is.na(sp3), 
+											 is.na(HGNC_ID)) %>%
+								mutate(INDEX = row_number()) 
+
+				for (i in seq(nrow(dtt))) {
+						p = dtt %>% filter(INDEX == i) %>% select(sp1) %>% pull()
+						x = get.hgnc.id(HGNC, p)
+						if (identical(x, character(0))) {
+								p = dtt %>% filter(INDEX == i) %>% select(sp2) %>% pull()
+								x = get.hgnc.id(HGNC, p)
+								}
+						if (!identical(x, character(0))) {
+								# print(paste0(p, ":", x))
+								tmp.symbol <- HGNC %>% filter(HGNC_ID == x) %>% select(SYMBOL) %>% pull()
+								df <- df %>% mutate(HGNC_ID = replace(HGNC_ID, Result == dtt$Result[i], x),
+																		SYMBOL = replace(SYMBOL, Result == dtt$Result[i], tmp.symbol))
+								}
+						}
+
 				# assign Aurora A/B/C given that it has 2 elements after splitting, i.e. Aurora A
 				dt <- df %>% filter(is.na(SYMBOL), !is.na(sp2), nchar(sp2) < 2) #, !grepl("\\(", Kinase)) 
 				loop_num <- nrow(dt)
-				for (i in seq(1, loop_num)) {
-						idx <- map_regex_match(dt, HGNC[, .(NAME, ALIAS_NAME, PREV_NAME)], i)
-						if (!is.na(idx)) {
-								df <- df %>% mutate(HGNC_ID = replace(HGNC_ID, 
-																											Result == dt$Result[i], 
-																											HGNC$HGNC_ID[idx]),
-																		SYMBOL = replace(SYMBOL,
-																										 Result == dt$Result[i],
-																										 HGNC$SYMBOL[idx])
-																	 ) 
+				if (loop_num > 0) {
+								for (i in seq(1, loop_num)) {
+										idx <- map_regex_match(dt, HGNC[, .(NAME, ALIAS_NAME, PREV_NAME)], i)
+										if (!is.na(idx)) {
+												df <- df %>% mutate(HGNC_ID = replace(HGNC_ID, 
+																															Result == dt$Result[i], 
+																															HGNC$HGNC_ID[idx]),
+																						SYMBOL = replace(SYMBOL,
+																														 Result == dt$Result[i],
+																														 HGNC$SYMBOL[idx])
+																					 ) 
+												}
 								}
 				}
 
@@ -167,18 +206,17 @@ clean_kinase_data <- function(HGNC, kinasedata, manual_map) {
                     mutate(HGNC_SYMBOL=SYMBOL, CRO_Kinase=Just_Kinase) %>%
                     arrange(HGNC_SYMBOL)
 
-				kinome_data <- kinome_data %>%
-										arrange(desc(Result))
-
 				# Tag each result with a bin value.
-				kinome_data <- kinome_data %>% mutate(bin_25 = case_when(Result <= 25 ~ "25", Result <=  50 ~ "50", Result <= 75 ~ "75", Result <= 90 ~ "90", Result > 90 ~ "100"))
-				kinome_data <- kinome_data %>% mutate(bin_10 = case_when(Result <= 10 ~ "10", Result <=  20 ~ "20", Result <= 30 ~ "30", 
-																																	 Result <= 40 ~ "40", Result <=  50 ~ "50", Result <= 60 ~ "60", 
-																																	 Result <= 70 ~ "70", Result <=  80 ~ "80", Result <= 90 ~ "90", 
-																																	 Result > 90 ~ "100"))
 				kinome_data <- kinome_data %>% 
-												arrange(desc(Result), SYMBOL) %>%
-												distinct(SYMBOL, .keep_all = T)
+												mutate(bin_25 = case_when(Result <= 25 ~ "25", Result <=  50 ~ "50", Result <= 75 ~ "75", 
+																									 Result <= 90 ~ "90", Result > 90 ~ "100"),
+															 bin_10 = case_when(Result <= 10 ~ "10", Result <=  20 ~ "20", Result <= 30 ~ "30", 
+																									 Result <= 40 ~ "40", Result <=  50 ~ "50", Result <= 60 ~ "60", 
+																									 Result <= 70 ~ "70", Result <=  80 ~ "80", Result <= 90 ~ "90", 
+																									 Result > 90 ~ "100") ) %>%
+											  arrange(desc(Result), SYMBOL) %>%
+											  distinct(SYMBOL, .keep_all = T) %>%
+												filter(Just_Kinase != kinasefilter)
 												
 				print(head(kinome_data))
 
