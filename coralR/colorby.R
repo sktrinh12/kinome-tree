@@ -129,6 +129,11 @@ resizes.by.value <- function(df,
     
     minvalue = 0
     maxvalue = 100
+    if (max(resizedf[[sel_colm]]) > 100) {
+				remainder <- max(resizedf[[sel_colm]]) - 100
+				resizedf <- resizedf %>%
+								mutate(!!sel_colm := !!as.name(sel_colm) - remainder)
+				}
   }
   
   if (controlledrange == TRUE)
@@ -142,7 +147,7 @@ resizes.by.value <- function(df,
   }
 
   # (2) shift values such that they start at zero
-  # no need since alwasy at zero
+  # no need since always at zero
   radii = resizedf[[sel_colm]]
   
   # (3) scale so max = 1
