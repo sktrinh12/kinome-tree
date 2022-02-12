@@ -38,6 +38,7 @@ source("coralR/makejson.R")
 source("coralR/colors.R")
 source("coralR/radiobuttonswithimages.R")
 source("lib/Rename.R")
+source("db.R")
 
 #---------------------- READ IN AND ORGANIZE DATA ----------------------#
 
@@ -214,7 +215,7 @@ defaultpalette = colorRampPalette( c(
 
 #XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-
+reactive_data <- reactiveValues()
 
 HGNC <- data.table(read_excel("data-input/HGNC-protein-coding-genes.xlsx")) %>% 
 				mutate(SYMBOL_UPPER = stringr::str_to_upper(SYMBOL))
@@ -246,21 +247,34 @@ ui <- dashboardPage(
                             width = 4,
                             numericInput(inputId = "cutoff", label = "Remove Values Less Than", 50),
                             textInput(inputId = "kinasefilter", label = "Remove Value from Just_Kinase Column", value = "Cascade")
-                        )
+                        ),
+											  box(
+												     selectizeInput(inputId = 'search_cmpd_ids',
+																	label = 'Search by Compound ID',
+																	choices = NULL,
+																	selected = NULL,
+																	multiple = FALSE,
+																	options = list(create = FALSE) # if TRUE, allows newly created inputs
+																  ),
+														hr(),
+														uiOutput("exp_id_output"),
+														uiOutput("tech_output"),
+														actionButton("submit", "Submit")
+												)
                     ),
                     tabBox(
                         id = "filetabs",
                         width = 12,
-                        selected = "Input File",
-                        tabPanel("Input File", 
+                        selected = "Original Data",
+                        tabPanel("Original Data", 
                             dataTableOutput("kinasetable"),
                             downloadButton("downloadInputData", "Download")
                         ),
-                        tabPanel("Cleaned File", 
+                        tabPanel("Cleaned Data", 
                             dataTableOutput("cleanedtable"),
                             downloadButton("downloadCleanedData", "Download")
                         ),
-                        tabPanel("Filtered File", 
+                        tabPanel("Filtered Data", 
                                  dataTableOutput("cleanedfilteredtable"),
                                  downloadButton("downloadCleanedFilteredData", "Download")
                         )
@@ -278,8 +292,8 @@ ui <- dashboardPage(
                   numericInput(inputId = "titlefontsize", label = "Title Font Size (px)", value = 18),
                   numericInput(inputId = "titley", label = "Title Vertical Position", value = 0),
                   numericInput(inputId = "nodesizemin", label = "Node Size Min", value = 5),
-                  numericInput(inputId = "nodesizemax", label = "Node Size Max", value = 60),
-                  numericInput(inputId = "nodelabelfontsize", label = "Node Label Font Size", value = 0),
+                  numericInput(inputId = "nodesizemax", label = "Node Size Max", value = 30),
+                  numericInput(inputId = "nodelabelfontsize", label = "Node Label Font Size", value = 7),
                   # textInput(inputId = "nodelabelcolor", label = "Node Label Color (default #999999)", value = "#999999"),
                   # textInput(inputId = "nodecolor", label = "Node Color (default #db0606)", value = "#db0606"),
                   colourInput('nodelabelcolor', 'Node Label Colour', "#1A1818"),
@@ -303,8 +317,7 @@ server <- function(input, output, session) {
     kinaseData <- reactive({
         req(input$kinasefile)
         tryCatch(
-            {
-                dt <- data.table(readxl::read_xlsx(input$kinasefile$datapath))
+            { dt <- data.table(readxl::read_xlsx(input$kinasefile$datapath))
             },
             error = function(e) {
                 # return a safeError if a parsing error occurs
@@ -315,17 +328,36 @@ server <- function(input, output, session) {
     })
     
     kinaseDataCleaned <- reactive({
-        req(input$kinasefile)
-        
-        dt <- clean_kinase_data(HGNC, kinaseData(), manual_map, input$cutoff, input$kinasefilter)
+        req(isTruthy(input$kinasefile) || isTruthy(input$submit))
+				if (isTruthy(input$kinasefile)) {
+								dt <- clean_kinase_data(HGNC, 
+																				kinaseData(), 
+																				manual_map
+																				)
+				}
+				if (isTruthy(input$submit)) {
+								req(input$search_cmpd_ids, input$exp_id, input$tech_id)
+								dt <- reactive_data$df_c
+				}	
         return(dt)
     })
     
     kinaseDataCleanedFiltered <- reactive({
-        req(input$kinasefile)
-        
-      
-        return(kinaseDataCleaned())
+        req(isTruthy(input$kinasefile) || isTruthy(input$submit))
+				if (isTruthy(input$kinasefile)) {
+								dt <- clean_kinase_data(HGNC, 
+																				kinaseData(), 
+																				manual_map, 
+																				input$cutoff, 
+																				input$kinasefilter
+																				)
+				}
+				if (isTruthy(input$submit)) {
+								req(input$search_cmpd_ids, input$exp_id, input$tech_id)
+								dt <- reactive_data$df_f
+				}	
+
+				return(dt)
     })
     
     output$kinasetable <- renderDataTable({
@@ -474,12 +506,106 @@ server <- function(input, output, session) {
         }
     )
     
+    # ----------------- FILTER BY COMPONUD ID -----------------
+
+  # Return the unfiltered kinome dataset (all exp ids)
+  get_unfil_kdata <- reactive({
+    req(input$search_cmpd_ids)
+    fetch_uf_kdata(input$search_cmpd_ids)
+  })
+
+  # Return the sub-final kinome dataset (single exp id)
+  get_subfil_kdata <- reactive({
+    req(input$search_cmpd_ids, input$exp_id)
+    fetch_f_kdata(input$search_cmpd_ids,
+                  input$exp_id 
+                 )
+  })
+
+  # show the final df from compd_id and experiment id after clicking Submit
+  observeEvent(input$submit, {
+    req(input$search_cmpd_ids, input$exp_id, input$tech_id)
+    # Return the final kinome dataset (single exp id + tech)
+    reactive_data$df_kd <- fetch_f_kdata(input$search_cmpd_ids,
+                        input$exp_id, 
+                        input$tech_id
+                       )
+    output$kinasetable <- renderDataTable(reactive_data$df_kd, 
+                                  options = list(pageLength = 25)
+													)
+
+    # cleaned data
+    reactive_data$df_c <- clean_kinase_data(HGNC, reactive_data$df_kd, manual_map)
+		# output$cleanedtable <- renderDataTable(df_c, 
+                                  # options = list(pageLength = 25)
+		# 											 )
+
+    # cleaned & filtered data
+    reactive_data$df_f <- clean_kinase_data(HGNC, reactive_data$df_kd, 
+																manual_map, 
+																input$cutoff, 
+																input$kinasefilter
+															)
+		# output$cleanedfilteredtable <- renderDataTable(df_f, 
+		# 																			options = list(pageLength = 25)
+		# 															 )
+  })
+
+  # poll the unique values every 1x10^6 milliseconds (~17 mins)
+  current_cmpd_ids <- reactivePoll(1E6, 
+                                    session, 
+                                    checkFunc = fetch_len_cmpd_ids, 
+                                    valueFunc = fetch_unq_cmpd_ids
+                      )
+
+  # update the search compound id input box with distinct values
+  observe({
+          updateSelectizeInput(session, 
+                              "search_cmpd_ids",
+                              choices = current_cmpd_ids(),
+                              selected = NULL,
+                              server = TRUE
+          )
+  })
+
+  # reactively update the experiment id input box with CROs
+  output$exp_id_output <- renderUI({
+      req(input$search_cmpd_ids)
+      exp_id_list <- unique(get_unfil_kdata()$EXPERIMENT_ID)
+      mdata_result <- sapply(exp_id_list, function(x) fetch_exp_mdata(x))
+      if (length(mdata_result) > 0) {
+        cros_n_expids <- sapply(seq(1:length(exp_id_list)), function(i) {
+                                  paste0(mdata_result[, i]$EXPERIMENT_ID, " (", 
+                                         mdata_result[, i]$PROPERTY_VALUE, ")")
+                                })
+        # dropdown menu that allows for selection of experimental id
+        selectInput(inputId = "exp_id", label = "Experiment ID (CRO)",
+                  choices = cros_n_expids,
+                  selected = NULL, multiple = FALSE)
+      } else { return(NULL) }
+  })
+
+  # reactively update the technology input box
+  output$tech_output <- renderUI({
+      req(input$search_cmpd_ids, input$exp_id)
+      tech_list <- unique(get_subfil_kdata()$TECHNOLOGY)
+      # print(tech_list)
+      if (length(tech_list) > 0) {
+        # dropdown menu that allows for selection of experimental id
+        selectInput(inputId = "tech_id", label = "Technology",
+                  choices = tech_list,
+                  selected = NULL, multiple = FALSE)
+      } else { return(NULL) }
+  })
+
+
     # ----------------- DELETE TEMP FILES WHEN SESSION ENDS ---------------- #
     
     session$onSessionEnded(function() {
         if (file.exists(outputjson)){file.remove(outputjson)}
         if (file.exists(subdffile)){file.remove(subdffile)}
         if (file.exists(svgoutfile)){file.remove(svgoutfile)}
+				dbDisconnect(conn)
     })
 }
 
