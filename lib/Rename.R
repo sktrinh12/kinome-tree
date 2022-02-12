@@ -66,8 +66,13 @@ get.hgnc.id <- function(HGNC, pattern ) {
     return(d)
     }
 
-clean_kinase_data <- function(HGNC, kinasedata, manual_map, cutoff, kinasefilter) {
-
+clean_kinase_data <- function(HGNC, kinasedata, manual_map, cutoff=-1E4, kinasefilter="") {
+				if ("PCT_INHIBITION_AVG" %in% names(kinasedata)) {
+								kinasedata <- kinasedata %>%
+																mutate(Result = PCT_INHIBITION_AVG,
+																			 Kinase = KINASE) %>% 
+																select(Kinase, Result)
+				}
 				ht <- HGNC %>%
 						select(SYMBOL_UPPER, HGNC_ID, SYMBOL) 
 
