@@ -82,9 +82,9 @@ clean_kinase_data <- function(HGNC, kinasedata, manual_map, cutoff=-1E4, kinasef
 						arrange(Kinase) %>%
 						filter(Result >= cutoff,
 								   !grepl(pattern = "\\[", x = Kinase), 
-								   !grepl(pattern = "^(?!.*\\/).*\\(.*\\)$", x = Kinase, perl=T),
+								   !grepl(pattern = "^(?!.*\\/).*\\(.*\\)$", x = Kinase, perl=T) ) %>%
 									 # !grepl(pattern = "/", x = Kinase),
-									 !grepl(pattern = "-", x = Kinase)) %>%
+									 # !grepl(pattern = "-", x = Kinase)) %>%
 						mutate(No_Greek =  case_when(
 							Kinase == "α" ~ "A",
 							Kinase == "β" ~ "B",
