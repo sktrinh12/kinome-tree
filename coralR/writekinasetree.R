@@ -1,3 +1,6 @@
+buffer <- 10
+y <- 255.8514
+txt_node_spacing <- 3
 
 # Define a function that writes the group names
 build.group.labels <- function(l,font,groupcolor)
@@ -74,10 +77,35 @@ build.node <- function(l)
                  "\" cy=\"",gsub(" ","",l["node.y"]),
                  "\" r=\"",l["node.radius"],
                  "\" opacity=\"",l["node.opacity"],
-                 "\" stroke=\"",l["node.strokecol"],
-                 "\" stroke-width=\"",l["node.strokewidth"],
+                 # "\" stroke=\"",l["node.strokecol"],
+                 # "\" stroke-width=\"",l["node.strokewidth"],
                  "\" fill=\"",l["node.col"],"\"/>",sep="")
   return(circle)
+}
+
+# Define a function that makes a generic legend
+build.node.legend <- function(df) {
+   node.g <- paste0("
+           <g> 
+           <circle cy=\"", df["cy_pos"],"\" cx=\"", df["cx_pos"],
+									 "\" r=\"", df["radius"], "\" style=\"fill: ", df["colours"], ";\"> 
+				   </circle>
+           <text font-family=\"Arial\" font-size=\"", df["font_size"], 
+									 "px\" y=\"", df["y_pos"] ,"\" x=\"", df["x_pos"], "\">", df["label"],"</text>
+           </g>"
+         )
+    node.g <- strwrap(node.g, width = 10000, simplify = T)
+    return(node.g)
+}
+
+# Define a function that grabs three stats of the dataframe column
+# Used for the legend build
+get.stats <- function(col_vals) {
+				col_vals <- as.numeric(col_vals)
+				ls_stats <- list(min = round(min(col_vals),0), 
+												median = round(median(col_vals),0), 
+												max = round(max(col_vals),0))
+				return(ls_stats)
 }
 
 # Define a function that writes an kinase tree svg file
@@ -128,12 +156,25 @@ writekinasetree <- function(svginfo,destination,font,labelselect,groupcolor,titl
   outputlines = c(outputlines,"<g id=\"GROUPS\">")
   outputlines = c(outputlines,unlist(lapply(svginfo$groups, build.group.labels, font=font,groupcolor=groupcolor)))
   outputlines = c(outputlines,"</g>")
+
+  # add legend
+  legend.node.size.title <- paste0("<text y=\"", 
+																   y - buffer,
+																	"\" x=\"98.9432\" font-family=\"Arial\" font-weight=\"700\" 
+																				letter-spacing=\".035\" font-size=\"9px\">Node Size</text>")
+
+  outputlines =  c(outputlines, "<g id=\"NODE_SIZE_LEGEND\">",
+                  legend.node.size.title,
+                  unlist(apply(svginfo$node_size_legend, 1, build.node.legend)),
+                  "</g>"
+                  )
+  outputlines = c(outputlines, "<g id=\"NODE_COLOUR_LEGEND\">
+                 <text y=\"330.5\" x=\"716.5\" font-family=\"Arial\" 
+								  font-weight=\"700\" letter-spacing=\".035\" font-size=\"9px\">Node Colours</text>", 
+                 unlist(apply(svginfo$node_group_legend, 1, build.node.legend)), 
+                 "</g>"
+                 )
   outputlines = c(outputlines,"</svg>")
   
   writeLines(outputlines,destination)
 }
-
-
-
-
-
