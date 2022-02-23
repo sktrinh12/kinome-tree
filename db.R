@@ -51,6 +51,7 @@ kin_panel_qstr <- "SELECT * FROM (
 				BATCH_ID,
 				REGEXP_SUBSTR (BATCH_ID, '[^-]+', 1, 2)    AS BATCH_NUM,
 				REGEXP_SUBSTR (BATCH_ID, '[^-]+', 1, 1)    AS COMPD_ID,
+				CONC,
 				EXPERIMENT_ID,
 				KINASE,
 				PCT_INHIBITION_AVG,
@@ -70,7 +71,7 @@ fetch_data <- function(conn, query_str) {
 
 # last function that is called when experiment id and optionally technology is passed
 fetch_f_kdata<- function(compd_id, exp_id, tech_id=NA) {
-  exp_id <- gsub(pattern = " \\(.*\\)",
+  exp_id <- gsub(pattern = " \\(.*$",
 								 x = exp_id, 
 								 replacement = ""
 								)	
@@ -102,6 +103,12 @@ fetch_exp_mdata <- function(exp_id) {
          WHERE EXPERIMENT_ID = '", exp_id, "' 
          AND PROPERTY_NAME = 'CRO'")
   d <- fetch_data(conn, query_str)
+  query_str <- paste0("SELECT CONC FROM FT_KINASE_PANEL 
+         WHERE EXPERIMENT_ID = '", exp_id, "' 
+         FETCH NEXT 1 ROWS ONLY")
+	# get concentration from kinase panel table
+  conc_data <- fetch_data(conn, query_str)
+  d$CONC <- conc_data$CONC
   return(d)
 }
 
