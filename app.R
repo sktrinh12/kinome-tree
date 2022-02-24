@@ -81,7 +81,6 @@ BG_col1 = "#D3D3D3"
 
 
 cpalette <- brewer.pal(9, "Set1")
-other_case_stmt <- glue::glue('TRUE ~ "{BG_col1}"') # to colour node grey
 
 #XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
@@ -174,13 +173,13 @@ ui <- dashboardPage(
 								box(
 								  width = 2,
                   selectInput(inputId = "node_colours_tgt", label = "Target Nodes", choices = c(), selected = NULL, multiple = TRUE),
-								  span(colourInput('node_tgt_cpick', '', cpalette[1], showColour = "background"), style = "margin:1px; padding:1px;"),
+								  colourInput('node_tgt_cpick', '', cpalette[1], showColour = "background"),
 								  hr(),
                   selectInput(inputId = "node_colours_offtgt", label = "Off-Target Nodes", choices = c(), selected = NULL, multiple = TRUE),
-								  span(colourInput('node_offtgt_cpick', '', cpalette[2], showColour = "background"), style = "margin:1px; padding:1px;"),
+								  colourInput('node_offtgt_cpick', '', cpalette[2], showColour = "background"),
 								  hr(),
                   selectInput(inputId = "node_colours_neutral", label = "Neutral Nodes", choices = c(), selected = NULL, multiple = TRUE),
-								  span(colourInput('node_net_cpick', '', cpalette[3], showColour = "background"), style = "margin:1px; padding:1px;")
+								  colourInput('node_net_cpick', '', cpalette[3], showColour = "background")
 								),
                 box(
                     width = 12,
