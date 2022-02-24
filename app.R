@@ -1,4 +1,3 @@
-# Libraries for Coral code
 # load basic libraries
 library(shiny)
 library(shinydashboard)
@@ -18,7 +17,6 @@ library(DT)
 
 # load other network libraries
 library(data.tree)
-# End libraries for Coral code
 
 
 library(data.table)
@@ -81,17 +79,6 @@ svginfo$dataframe$branchorder = 1:nrow(svginfo$dataframe)
 # Default tree branch color
 BG_col1 = "#D3D3D3"
 
-# Default selected color
-Cor_col = "#db0606"  #FA6958"
-
-# 2-color heatmap colors
-HM2_low = "#1EA0F7"
-HM2_hi = "#FACE1E"
-
-# default heatmap colors
-HM_low = "#1b8ed1"
-HM_med = "#e0e0e0"
-HM_hi = "#FA6958"
 
 cpalette <- brewer.pal(9, "Set1")
 other_case_stmt <- glue::glue('TRUE ~ "{BG_col1}"') # to colour node grey
@@ -105,7 +92,7 @@ HGNC <- data.table(read_excel("data-input/HGNC-protein-coding-genes.xlsx")) %>%
 
 manual_map <- data.table(read_excel("data-input/manual-map.xlsx"))
 
-# 
+ 
 ui <- dashboardPage(
     skin = "blue",
     dashboardHeader(
@@ -118,6 +105,9 @@ ui <- dashboardPage(
         )
     ),
     dashboardBody(
+			  tags$head(
+						tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
+				),
         bsAlert("alert"),
         tabItems(
             tabItem("data",
@@ -178,16 +168,19 @@ ui <- dashboardPage(
                   numericInput(inputId = "nodesizemin", label = "Node Size Min", value = 5),
                   numericInput(inputId = "nodesizemax", label = "Node Size Max", value = 30),
                   numericInput(inputId = "nodelabelfontsize", label = "Node Label Font Size", value = 7),
-                  colourInput('nodelabelcolor', 'Node Label Colour', "#1A1818"),
-                  # colourInput('nodecolor', 'Node Colour', cpalette[1]), #"#db0606"),
-                  # colourInput('nodeoutlinecolor', 'Node Outline Colour', cpalette[2]), #"#a80606"),
+                  colourInput('nodelabelcolor', 'Node Label Colour', "#1A1818", showColour = "background"),
                   numericInput(inputId = "nodeopacity", label = "Node Opacity (default 50%)", value = 50, min = 0, max = 100, step = 5)
                 ),
 								box(
 								  width = 2,
-									h5(strong("Node Legend Colours")),
-								  # title = "Node Legend Colours",
-									uiOutput('node_legend')
+                  selectInput(inputId = "node_colours_tgt", label = "Target Nodes", choices = c(), selected = NULL, multiple = TRUE),
+								  span(colourInput('node_tgt_cpick', '', cpalette[1], showColour = "background"), style = "margin:1px; padding:1px;"),
+								  hr(),
+                  selectInput(inputId = "node_colours_offtgt", label = "Off-Target Nodes", choices = c(), selected = NULL, multiple = TRUE),
+								  span(colourInput('node_offtgt_cpick', '', cpalette[2], showColour = "background"), style = "margin:1px; padding:1px;"),
+								  hr(),
+                  selectInput(inputId = "node_colours_neutral", label = "Neutral Nodes", choices = c(), selected = NULL, multiple = TRUE),
+								  span(colourInput('node_net_cpick', '', cpalette[3], showColour = "background"), style = "margin:1px; padding:1px;")
 								),
                 box(
                     width = 12,
@@ -286,8 +279,6 @@ server <- function(input, output, session) {
         }
     )
     
-    # outputjson      = tempfile(pattern="kinome_tree",tmpdir="www/json",fileext = ".json") # session specific json file describing network
-    # subdffile       = tempfile(pattern="subdf",tmpdir="tempfiles",fileext = ".txt") # temp file used to make json file
     svgoutfile      = tempfile(pattern="kintreeout",tmpdir="tempfiles",fileext = ".svg") # session specific tree svg file
     
     insertUI(selector = "#treediv",where = "afterEnd",ui = source("coralR/renderTree.R",local=TRUE)$value)
@@ -299,9 +290,6 @@ server <- function(input, output, session) {
         
         # set font family
         tempdf$text.font = paste("'","Arial","'",sep="")
-        
-        # establish legend (NOT USED)
-        # legend = c()
         
 				kdata = kinaseDataCleanedFiltered()
 				print(paste('KINASE DATA CLEANED & FILTERED', paste0(rep('-',20), collapse="")))
@@ -347,12 +335,10 @@ server <- function(input, output, session) {
 								
 								# Change Color and Size of Font for Selected kinases
 								tempdf <- tempdf %>% mutate(node.selected = ifelse(id.coral %in% resizedf$id.coral, 1, -1),
-														# node.col = ifelse(node.selected == 1, input$nodecolor, BG_col1),
 														node.radius = radii_and_mapping[[1]],
 														node.val.radius = radii_and_mapping[[2]],
 														text.col = ifelse(node.selected == 1, input$nodelabelcolor, BG_col1), # set selected font color and size
 														text.size = ifelse(node.selected == 1, input$nodelabelfontsize, 0), 
-														# node.strokecol = input$nodeoutlinecolor, #a80606 Node stroke color
 														node.opacity = input$nodeopacity/100,
 														branch.col = BG_col1
 														) 
@@ -372,72 +358,44 @@ server <- function(input, output, session) {
 
 								# for renderUI colourInput
 								reactive_data$nbr_nodes <- nbr_kgroups
-								colours <- sapply(seq(reactive_data$nbr_nodes), 
-										function(x) { input[[paste0('node_', x)]] }
-								)
 
-								if (any(sapply(colours, is.null))) {
-												print('null found in reactive input node list')
-												colours <- cpalette[seq(nbr_kgroups)]
+								colours <- c(input$node_tgt_cpick,
+														input$node_offtgt_cpick,
+														input$node_net_cpick
+													  )
+																
+								if (all(sapply(colours, function(x) {!isTruthy(x)}))) {
+												# print('empty input for kinase symbol colour map list')
+												colours <- cpalette[seq(3)]
 								}
 
-								kgrp_col_map <- data.frame(colours = colours,
-																					 label = reactive_data$kinase_groups)
+								hgnc_node_selected <- list(input$node_colours_tgt, input$node_colours_offtgt)
+								
+								# default nodes to select
+								if (all(sapply(seq(2), function(x) {!isTruthy(hgnc_node_selected[[x]])}))) {
+												# print('not selected yet')
+												hgnc_node_selected <- list(resizedf$HGNC_SYMBOL[1], resizedf$HGNC_SYMBOL[seq(2, nrow(resizedf))])
+								}
 
-								print(paste('KINASE GROUP COLOUR MAP', paste0(rep('-',20), collapse="")))
-								print(kgrp_col_map)
-								print(paste('KINASE GROUPS', paste0(rep('-',20), collapse="")))
-								print(reactive_data$kinase_groups)
-
-								# temp df kinase group colour mapped for legend + case_when statement
-								tdf_kgrp_cmap <- tdf_kgrp %>%
-                                  merge(kgrp_col_map, by.x = "kinase.group",
-                                        by.y = "label", 
-                                        all.x = T) %>%
-                                  mutate(
-                                        case_stmt = glue::glue('kinase.group == "{kinase.group}" ~ "{colours}"'),
-                                        case_stmt = rlang::parse_exprs(case_stmt)
-                                        ) %>%
-                                  add_row(kinase.group = 'ELSE',
-                                        colours = cpalette[9], 
-                                        case_stmt = rlang::parse_exprs(other_case_stmt)
-                                  )
-                                # distinct(node.radius, .keep_all = T)
-
-								print(paste('TDF_KGRP_CMAP',paste0(rep('-',20), collapse="")))
-								print(tdf_kgrp_cmap)
-
+								# print(paste('hgnc_node_selected',paste0(rep('-',20), collapse="")))
+								# print(hgnc_node_selected)
+								
                 # set node colours
                 tempdf <- tempdf %>%
                             mutate(node.col = case_when(
-                                        !!!tdf_kgrp_cmap$case_stmt)
-                            )
+															id.HGNC %in%  hgnc_node_selected[[1]] ~ colours[1],
+												      id.HGNC %in%  hgnc_node_selected[[2]] ~ colours[2],
+															TRUE ~ colours[3]
+												      )
+													  )
 
-
-                # remove that last ELSE case stmt from df
-                tdf_kgrp_cmap <- tdf_kgrp_cmap %>%
-                                    filter(kinase.group != "ELSE")
-
-								# get number of rows of unique kinase groups
-								tdf_colour_group <- kgrp_col_map %>%
-																				mutate(y_pos = cumsum(c(350.5302, rep(14, nbr_kgroups-1))),
-																								cy_pos = cumsum(c(347.5302, rep(14, nbr_kgroups-1))),
-																								radius = 5,
-																								x_pos = 728.5648,
-																								cx_pos = 718.5684,
-																								label = label,
-																								font_size = 9)
-
-								# radius_vals <- get.stats(tdf_kgrp$node.radius)
-								# print(radius_vals)
-								# pct_inb_res <- get.stats(resizedf[[sel_colm]])
-								# print(pct_inb_res)
 
 								# combine the input types (result, bins) with the node.radius and misc columns
 								# node size dataframe for reference legend
-								tdf_node_size <- tdf_kgrp_cmap %>%
-																				merge(resizedf, 
-																							by = c("id.coral", "id.HGNC")) %>%
+
+								tdf_node_size <- tempdf %>%
+																				filter(id.coral %in% resizedf$id.coral) %>%
+																				merge(resizedf, by = c("id.coral", "id.HGNC")) %>%
 																				mutate(!!sel_colm := as.integer(!!as.name(sel_colm))) %>%
 																				arrange(!!as.name(sel_colm)) %>%
 																				distinct(!!as.name(sel_colm), .keep_all = T) %>%
@@ -448,15 +406,15 @@ server <- function(input, output, session) {
 																						  x_pos = 112.75,
 																						  cx_pos = 117.5,
 																						  radius = node.radius,
-																						  # label = round(node.radius, 1),
 																						  label = !!as.name(sel_colm),
 																						  colours = BG_col1,
-																						  font_size = 9)
+																						  font_size = 9) %>%
+																				select(-branch.coords)
 				
 								print(paste('TDF_NODE_SIZE', paste0(rep('-',20), collapse="")))
 								print(tdf_node_size)
 
-								return(list(tempdf, tdf_colour_group, tdf_node_size))
+								return(list(tempdf, tdf_node_size))
 
 								} # end if-else stmt
 						}) # end reactive
@@ -471,8 +429,7 @@ server <- function(input, output, session) {
 												stop("Error")
 								}
 								svginfo$dataframe = df_data[[1]]
-								svginfo$node_group_legend = df_data[[2]]
-								svginfo$node_size_legend = df_data[[3]]
+								svginfo$node_size_legend = df_data[[2]]
 
 								# set title
 								svginfo$title = input$charttitle
@@ -540,6 +497,29 @@ server <- function(input, output, session) {
 																input$cutoff, 
 																input$kinasefilter
 															)
+
+    # update the node selection for target nodes 
+	  updateSelectInput(session, 
+											"node_colours_tgt",
+											choices = reactive_data$df_f$HGNC_SYMBOL,
+											selected = NULL
+	  )
+
+
+    # update the node selection for off target nodes
+    updateSelectizeInput(session, 
+											"node_colours_offtgt",
+											choices = reactive_data$df_f$HGNC_SYMBOL,
+											selected = NULL
+    )
+
+    # update the node selection for neutral nodes
+    updateSelectizeInput(session, 
+											"node_colours_neutral",
+											choices = reactive_data$df_f$HGNC_SYMBOL,
+											selected = NULL
+    )
+
   })
 
   # poll the unique values every 1x10^6 milliseconds (~17 mins)
@@ -558,6 +538,7 @@ server <- function(input, output, session) {
                               server = TRUE
           )
   })
+
 
   # reactively update the experiment id input box with CROs
   output$exp_id_output <- renderUI({
@@ -590,29 +571,10 @@ server <- function(input, output, session) {
       } else { return(NULL) }
   })
 
-  output$node_legend <- renderUI({
-        # column(width = 2,
-          fluidRow(
-            lapply(seq(as.integer(reactive_data$nbr_nodes)), function(n) {
-                column(2,
-                      span(colourInput(paste0('node_',n),
-                                    reactive_data$kinase_groups[n], 
-                                    cpalette[n], 
-                                    showColour = "background"
-                                 ),
-													style = "font-size:8px;")
-                       )
-                  })
-                )
-            # )
-  })
-
 
     # ----------------- DELETE TEMP FILES WHEN SESSION ENDS ---------------- #
     
     session$onSessionEnded(function() {
-        # if (file.exists(outputjson)){file.remove(outputjson)}
-        # if (file.exists(subdffile)){file.remove(subdffile)}
         if (file.exists(svgoutfile)){file.remove(svgoutfile)}
 				dbDisconnect(conn)
     })
