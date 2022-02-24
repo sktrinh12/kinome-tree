@@ -77,8 +77,6 @@ build.node <- function(l)
                  "\" cy=\"",gsub(" ","",l["node.y"]),
                  "\" r=\"",l["node.radius"],
                  "\" opacity=\"",l["node.opacity"],
-                 # "\" stroke=\"",l["node.strokecol"],
-                 # "\" stroke-width=\"",l["node.strokewidth"],
                  "\" fill=\"",l["node.col"],"\"/>",sep="")
   return(circle)
 }
@@ -98,15 +96,6 @@ build.node.legend <- function(df) {
     return(node.g)
 }
 
-# Define a function that grabs three stats of the dataframe column
-# Used for the legend build
-get.stats <- function(col_vals) {
-				col_vals <- as.numeric(col_vals)
-				ls_stats <- list(min = round(min(col_vals),0), 
-												median = round(median(col_vals),0), 
-												max = round(max(col_vals),0))
-				return(ls_stats)
-}
 
 # Define a function that writes an kinase tree svg file
 writekinasetree <- function(svginfo,destination,font,labelselect,groupcolor,titley, titlefontsize)
@@ -168,12 +157,7 @@ writekinasetree <- function(svginfo,destination,font,labelselect,groupcolor,titl
                   unlist(apply(svginfo$node_size_legend, 1, build.node.legend)),
                   "</g>"
                   )
-  outputlines = c(outputlines, "<g id=\"NODE_COLOUR_LEGEND\">
-                 <text y=\"330.5\" x=\"716.5\" font-family=\"Arial\" 
-								  font-weight=\"700\" letter-spacing=\".035\" font-size=\"9px\">Node Colours</text>", 
-                 unlist(apply(svginfo$node_group_legend, 1, build.node.legend)), 
-                 "</g>"
-                 )
+
   outputlines = c(outputlines,"</svg>")
   
   writeLines(outputlines,destination)
