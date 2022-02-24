@@ -223,7 +223,7 @@ clean_kinase_data <- function(HGNC, kinasedata, manual_map, cutoff=-1E4, kinasef
 											  distinct(SYMBOL, .keep_all = T) %>%
 												filter(Just_Kinase != kinasefilter)
 												
-				print(head(kinome_data))
+				# print(head(kinome_data))
 
 				return(kinome_data)
 }
