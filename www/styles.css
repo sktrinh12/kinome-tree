@@ -1,6 +1,12 @@
-#node_tgt_cpick, #node_offtgt_cpick, #node_net_cpick {
+#node_tgt_cpick, #node_offtgt_cpick {
 				padding: 1px 1px;
 				height: auto; 
 				margin-bottom: 1px;
-				margin-top: -16px;
+				margin-top: -28px;
+}
+
+#node_colours_tgt {
+				padding: 1px 1px;
+				margin-bottom: -14px;
+				margin-top: 1px;
 }
