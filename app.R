@@ -73,14 +73,20 @@ svginfo = orig_svginfo
 svginfo$dataframe$nodeorder = 1:nrow(svginfo$dataframe)
 svginfo$dataframe$branchorder = 1:nrow(svginfo$dataframe)
 
-
-#---------------------- DEFAULT COLORS ----------------------#
-
 # Default tree branch color
 BG_col1 = "#D3D3D3"
 
-
 cpalette <- brewer.pal(9, "Set1")
+
+# base dataframe for group colour legend
+tdf_base_gc <- data.frame(label = c("Target", "Off-Target"),
+                            colours = c(cpalette[1], cpalette[2]),
+                            y_pos = c(350.5302, 364.5302),
+                            cy_pos = c(347.5302, 361.5302),
+                            radius = 5,
+                            x_pos = 728.5648,
+                            cx_pos = 718.5684,
+                            font_size =  9)
 
 #XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
@@ -175,11 +181,12 @@ ui <- dashboardPage(
                   selectInput(inputId = "node_colours_tgt", label = "Target Nodes", choices = c(), selected = NULL, multiple = TRUE),
 								  colourInput('node_tgt_cpick', '', cpalette[1], showColour = "background"),
 								  hr(),
-                  selectInput(inputId = "node_colours_offtgt", label = "Off-Target Nodes", choices = c(), selected = NULL, multiple = TRUE),
-								  colourInput('node_offtgt_cpick', '', cpalette[2], showColour = "background"),
-								  hr(),
-                  selectInput(inputId = "node_colours_neutral", label = "Neutral Nodes", choices = c(), selected = NULL, multiple = TRUE),
-								  colourInput('node_net_cpick', '', cpalette[3], showColour = "background")
+                  # selectInput(inputId = "node_colours_offtgt", label = "Off-Target Nodes", choices = c(), selected = NULL, multiple = TRUE),
+                  h5(strong("Off-Target Nodes")),
+								  colourInput('node_offtgt_cpick', '', cpalette[2], showColour = "background")
+								  # hr(),
+                  # h5(strong("Neutral Nodes")),
+								  # colourInput('node_net_cpick', '', cpalette[3], showColour = "background")
 								),
                 box(
                     width = 12,
@@ -292,7 +299,7 @@ server <- function(input, output, session) {
         
 				kdata = kinaseDataCleanedFiltered()
 				print(paste('KINASE DATA CLEANED & FILTERED', paste0(rep('-',20), collapse="")))
-				print(head(kdata))
+				print(kdata)
 				print(input$plotresultcolumn)        
 
 				sel_colm <- input$plotresultcolumn # either bin10, bin25 or result (drop down menu)
@@ -343,37 +350,29 @@ server <- function(input, output, session) {
 														) 
 
 								# temp df kinase group for legend
-								tdf_kgrp <- tempdf %>%
-															filter(id.HGNC %in% resizedf$HGNC_SYMBOL) %>%
-															select(id.coral, id.HGNC, kinase.group, node.radius) %>%
-															arrange(node.radius)
+								# tdf_kgrp <- tempdf %>%
+								# 							filter(id.HGNC %in% resizedf$HGNC_SYMBOL) %>%
+								# 							select(id.coral, id.HGNC, kinase.group, node.radius) %>%
+								# 							arrange(node.radius)
 
-								if (length(tdf_kgrp) == 0) {
-												stop("Empty dataframe")
-								}
+								# if (length(tdf_kgrp) == 0) {
+								# 				stop("Empty dataframe")
+								# }
 
-								reactive_data$kinase_groups <- unique(tdf_kgrp$kinase.group)
-                nbr_kgroups <- length(reactive_data$kinase_groups)
+								# reactive_data$kinase_groups <- unique(tdf_kgrp$kinase.group)
+                # nbr_kgroups <- length(reactive_data$kinase_groups)
 
 								# for renderUI colourInput
-								reactive_data$nbr_nodes <- nbr_kgroups
+								# reactive_data$nbr_nodes <- nbr_kgroups
 
 								colours <- c(input$node_tgt_cpick,
-														input$node_offtgt_cpick,
-														input$node_net_cpick
-													  )
+														input$node_offtgt_cpick)
 																
-								if (all(sapply(colours, function(x) {!isTruthy(x)}))) {
-												# print('empty input for kinase symbol colour map list')
-												colours <- cpalette[seq(3)]
-								}
-
-								hgnc_node_selected <- list(input$node_colours_tgt, input$node_colours_offtgt)
+								hgnc_node_selected <- input$node_colours_tgt
 								
 								# default nodes to select
-								if (all(sapply(seq(2), function(x) {!isTruthy(hgnc_node_selected[[x]])}))) {
-												# print('not selected yet')
-												hgnc_node_selected <- list(resizedf$HGNC_SYMBOL[1], resizedf$HGNC_SYMBOL[seq(2, nrow(resizedf))])
+								if (!isTruthy(hgnc_node_selected)) {
+												hgnc_node_selected <- resizedf$HGNC_SYMBOL[1] # default to top pct inhibitor
 								}
 
 								# print(paste('hgnc_node_selected',paste0(rep('-',20), collapse="")))
@@ -382,13 +381,18 @@ server <- function(input, output, session) {
                 # set node colours
                 tempdf <- tempdf %>%
                             mutate(node.col = case_when(
-															id.HGNC %in%  hgnc_node_selected[[1]] ~ colours[1],
-												      id.HGNC %in%  hgnc_node_selected[[2]] ~ colours[2],
-															TRUE ~ colours[3]
+															id.HGNC %in%  hgnc_node_selected ~ colours[1],
+												      # id.HGNC %in%  hgnc_node_selected[[2]] ~ colours[2],
+															TRUE ~ colours[2]
 												      )
 													  )
 
+                tdf_group_colour <- tdf_base_gc %>%
+                                        mutate(colours = c(input$node_tgt_cpick, input$node_offtgt_cpick))
 
+								print(paste('TDF_GROUP_COOUR', paste0(rep('-',20), collapse="")))
+								print(tdf_group_colour)
+                                        
 								# combine the input types (result, bins) with the node.radius and misc columns
 								# node size dataframe for reference legend
 
@@ -413,7 +417,7 @@ server <- function(input, output, session) {
 								print(paste('TDF_NODE_SIZE', paste0(rep('-',20), collapse="")))
 								print(tdf_node_size)
 
-								return(list(tempdf, tdf_node_size))
+								return(list(tempdf, tdf_node_size, tdf_group_colour))
 
 								} # end if-else stmt
 						}) # end reactive
@@ -429,6 +433,7 @@ server <- function(input, output, session) {
 								}
 								svginfo$dataframe = df_data[[1]]
 								svginfo$node_size_legend = df_data[[2]]
+								svginfo$node_group_colour = df_data[[3]]
 
 								# set title
 								svginfo$title = input$charttitle
@@ -513,11 +518,11 @@ server <- function(input, output, session) {
     )
 
     # update the node selection for neutral nodes
-    updateSelectizeInput(session, 
-											"node_colours_neutral",
-											choices = reactive_data$df_f$HGNC_SYMBOL,
-											selected = NULL
-    )
+    # updateSelectizeInput(session, 
+											# "node_colours_neutral",
+											# choices = reactive_data$df_f$HGNC_SYMBOL,
+											# selected = NULL
+    # )
 
   })
 
