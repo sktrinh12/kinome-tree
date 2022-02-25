@@ -158,6 +158,13 @@ writekinasetree <- function(svginfo,destination,font,labelselect,groupcolor,titl
                   "</g>"
                   )
 
+  outputlines = c(outputlines, "<g id=\"NODE_COLOUR_LEGEND\">
+                 <text y=\"330.5\" x=\"716.5\" font-family=\"Arial\" 
+								  font-weight=\"700\" letter-spacing=\".035\" font-size=\"9px\">Node Colours</text>", 
+                 unlist(apply(svginfo$node_group_colour, 1, build.node.legend)), 
+                 "</g>"
+                 )
+
   outputlines = c(outputlines,"</svg>")
   
   writeLines(outputlines,destination)
