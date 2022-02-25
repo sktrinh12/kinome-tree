@@ -223,7 +223,17 @@ clean_kinase_data <- function(HGNC, kinasedata, manual_map, cutoff=-1E4, kinasef
 											  distinct(SYMBOL, .keep_all = T) %>%
 												filter(Just_Kinase != kinasefilter)
 												
-				print(head(kinome_data))
+				# check for C-MER (one-off situation)
+        if (any(grepl(x = kinome_data$Just_Kinase, pattern = "c-mer", ignore.case = T))) {
+           kinome_data <- kinome_data %>% mutate(
+                        SYMBOL = case_when(
+                            Just_Kinase == "C-MER" ~ "MERTK",
+                            TRUE ~ SYMBOL
+                        ),
+                        HGNC_SYMBOL = SYMBOL
+                    )
+           
+        }
 
 				return(kinome_data)
 }
