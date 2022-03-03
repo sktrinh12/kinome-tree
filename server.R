@@ -119,7 +119,6 @@ server <- function(input, output, session) {
 									 content = "Cannot map to kinome tree; there was no HGNC match for those kinases", append = FALSE)
 				} else {
 								closeAlert(session, "resizedf_qcheck")
-								print(paste0(rep('-',20), collapse=""))
 
 
 								# ------------------ NODE SIZE & COLOUR ------------------ #
@@ -151,22 +150,6 @@ server <- function(input, output, session) {
 														branch.col = BG_col1
 														) 
 
-								# temp df kinase group for legend
-								# tdf_kgrp <- tempdf %>%
-								# 							filter(id.HGNC %in% resizedf$HGNC_SYMBOL) %>%
-								# 							select(id.coral, id.HGNC, kinase.group, node.radius) %>%
-								# 							arrange(node.radius)
-
-								# if (length(tdf_kgrp) == 0) {
-								# 				stop("Empty dataframe")
-								# }
-
-								# reactive_data$kinase_groups <- unique(tdf_kgrp$kinase.group)
-                # nbr_kgroups <- length(reactive_data$kinase_groups)
-
-								# for renderUI colourInput
-								# reactive_data$nbr_nodes <- nbr_kgroups
-
 								colours <- c(input$node_tgt_cpick,
 														input$node_offtgt_cpick)
 																
@@ -176,15 +159,11 @@ server <- function(input, output, session) {
 								if (!isTruthy(hgnc_node_selected)) {
 												hgnc_node_selected <- resizedf$HGNC_SYMBOL[1] # default to top pct inhibitor
 								}
-
-								# print(paste('hgnc_node_selected',paste0(rep('-',20), collapse="")))
-								# print(hgnc_node_selected)
 								
                 # set node colours
                 tempdf <- tempdf %>%
                             mutate(node.col = case_when(
 															id.HGNC %in%  hgnc_node_selected ~ colours[1],
-												      # id.HGNC %in%  hgnc_node_selected[[2]] ~ colours[2],
 															TRUE ~ colours[2]
 												      )
 													  )
@@ -192,7 +171,7 @@ server <- function(input, output, session) {
                 tdf_group_colour <- tdf_base_gc %>%
                                         mutate(colours = c(input$node_tgt_cpick, input$node_offtgt_cpick))
 
-								print(paste('TDF_GROUP_COOUR', paste0(rep('-',20), collapse="")))
+								print(paste('TDF_GROUP_COLOUR', paste0(rep('-',20), collapse="")))
 								print(tdf_group_colour)
                                         
 								# combine the input types (result, bins) with the node.radius and misc columns
@@ -230,9 +209,11 @@ server <- function(input, output, session) {
 								
 								# recolor the official matrix
 								df_data = newdf()
-								if (length(df_data) == 0) {
-												stop("Error")
+
+								if (dim(df_data[[1]])[1] == 0) {
+												stop("Error - no data retrieved based on given constraints")
 								}
+
 								svginfo$dataframe = df_data[[1]]
 								svginfo$node_size_legend = df_data[[2]]
 								svginfo$node_group_colour = df_data[[3]]
@@ -319,13 +300,6 @@ server <- function(input, output, session) {
 											selected = NULL
     )
 
-    # update the node selection for neutral nodes
-    # updateSelectizeInput(session, 
-											# "node_colours_neutral",
-											# choices = reactive_data$df_f$HGNC_SYMBOL,
-											# selected = NULL
-    # )
-
   })
 
   # poll the unique values every 1x10^6 milliseconds (~17 mins)
@@ -377,6 +351,158 @@ server <- function(input, output, session) {
       } else { return(NULL) }
   })
 
+
+  observeEvent(input$click_polar, {
+
+				req(input$search_cmpd_ids, input$exp_id, input$tech_id)
+
+				# returns a list of df (without NA's and only NA's)
+				dt <- clean_mutkinase_data(HGNC, 
+																reactive_data$df_kd,
+																manual_map, 
+																input$cutoff, 
+																input$kinasefilter
+																)
+
+				reactive_data$missing <- dt$missing_kinasedata
+
+				dt <- svginfo$dataframe %>%
+								select(id.coral, id.HGNC) %>%
+								merge(dt$kinasedata, by.x = "id.HGNC", by.y = "SYMBOL") %>%
+								rename(HGNC_SYMBOL = id.HGNC,
+											CRO_Kinase = KINASE) %>%
+								mutate(group = as.factor(HGNC_SYMBOL)) %>%
+								arrange(KINASE_NAME)
+
+				print(paste('SVGINFO MERGED ON KINASEDATA', paste0(rep('-',20), collapse="")))
+				print(dt)
+
+				NA_to_add <- data.frame(matrix(NA, empty_bars*nlevels(dt$group), ncol(dt)))
+				colnames(NA_to_add) <- colnames(dt)
+				NA_to_add$group <- rep(levels(dt$group), each = empty_bars)
+				dt <- rbind(dt, NA_to_add) %>%
+								arrange(group) %>%
+								mutate(INDEX = row_number())
+
+				number_of_bars <- nrow(dt)
+				angle <- 90 - 360*(dt$INDEX - 0.5) / number_of_bars # to place in the middle
+				dt$hjust <- ifelse(angle < -90, 1, 0) # horizontal adjust when on left/right
+				dt$angle <- ifelse(angle < -90, angle+180, angle) 
+
+				# set colour schema
+			  colours <- cpalette[seq(nlevels(dt$group))]
+
+				names(colours) <- levels(dt$group)
+				# print(paste('COLOURS FACTOR', paste0(rep('-',20), collapse="")))
+				# print(colours)
+
+				colours <- ggplot2::scale_fill_manual(name = "HGNC SYMBOLS", values = colours)
+
+				reactive_data$polarplot <- ggplot2::ggplot(dt, ggplot2::aes(x = as.factor(INDEX), 
+																								y = Result,
+																								fill = HGNC_SYMBOL)) + 
+																				ggplot2::geom_bar(ggplot2::aes(x = as.factor(INDEX), 
+																								y = Result), 
+																								stat = "identity", alpha = 0.7) + 
+																				ggplot2::ylim(-20, 115) + 
+																				ggplot2::theme_minimal() + 
+																				ggplot2::theme(
+																								axis.text = ggplot2::element_blank(),
+																								axis.title = ggplot2::element_blank(),
+																								panel.grid = ggplot2::element_blank(),
+																								plot.margin = ggplot2::unit(rep(0,4), "cm")
+																				) + 
+																				ggplot2::coord_polar() + 
+																				ggplot2::geom_text(ggplot2::aes(x = INDEX,
+																							  y = Result+10,
+																							  label = CRO_Kinase,
+																							  hjust = hjust),
+																								color = "black", fontface = "bold", 
+																								alpha = 0.6, size = 3.25, angle = dt$angle) + 
+																				ggplot2::geom_text(ggplot2::aes(x = INDEX,
+																								y = Result-20,
+																								label = round(Result,1),
+																								hjust = hjust),
+																								color = "black", fontface = "bold", 
+																								alpha = 0.6, size = 4.25, angle = dt$angle) + 
+																				ggplot2::ggtitle(paste("Mutant Pct Inb Polar Histogram -", 
+																																input$search_cmpd_ids))  +
+																				colours
+    })
+
+    observeEvent(input$click_lolli, {
+
+				req(input$search_cmpd_ids, input$exp_id, input$tech_id)
+				dt <- clean_mutkinase_data(HGNC, 
+												reactive_data$df_kd,
+												manual_map, 
+												input$cutoff, 
+												input$kinasefilter
+												)
+				
+				reactive_data$missing <- dt$missing_kinasedata
+
+				if (dim(dt$kinasedata)[1] == 0) { 
+								stop("No data for the provided filters")
+				}
+
+				# replace this var
+				dt <- svginfo$dataframe %>%
+												select(id.coral, id.HGNC) %>%
+												merge(dt$kinasedata, by.x = "id.HGNC", by.y = "SYMBOL") %>%
+												rename(HGNC_SYMBOL = id.HGNC,
+																CRO_Kinase = KINASE)
+
+				# print(paste('MUTANT DATA CLEANED & FILTERED', paste0(rep('-',20), collapse="")))
+				# print(dt)
+
+				dt <- dt %>%
+				 arrange(KINASE_NAME) %>%
+				 mutate(CRO_Kinase= factor(CRO_Kinase, levels = CRO_Kinase))
+
+				# set colour schema
+				families <- factor(unique(dt$HGNC_SYMBOL))
+			  colours <- cpalette[seq(length(families))]
+
+				names(colours) <- levels(families)
+				# print(paste('COLOURS FACTOR', paste0(rep('-',20), collapse="")))
+				# print(colours)
+				colours <- ggplot2::scale_colour_manual(name = "HGNC SYMBOLS", values = colours)
+
+				reactive_data$lolliplot <- ggplot2::ggplot(dt, ggplot2::aes(x=CRO_Kinase, y=Result)) +
+					ggplot2::geom_segment(
+						ggplot2::aes(x=CRO_Kinase, 
+												xend=CRO_Kinase, 
+												y=0, 
+												yend=Result, 
+												colour = factor(HGNC_SYMBOL)), 
+										size=0.7
+											) + 
+					  ggplot2::geom_point(
+						  ggplot2::aes(colour = factor(HGNC_SYMBOL)),
+										size=2
+						    			) +
+					  ggplot2::geom_text(
+							ggplot2::aes(x = CRO_Kinase,
+												   y = Result, 
+												   label = round(Result, 1)), 
+												   nudge_y = -2) + 
+					  colours + 
+					  ggplot2::coord_flip() + 
+					  ggplot2::scale_x_discrete(limits=rev) +
+					  ggplot2::ggtitle(paste("Mutant Pct Inb Lolliplot -", input$search_cmpd_ids)) + 
+					  ggplot2::theme(axis.text.y = ggplot2::element_text(size = 14))
+    })
+
+		output$lolliplot <- renderPlot({
+			if (is.null(reactive_data$lolliplot)) return()
+			reactive_data$lolliplot
+		})
+
+		output$polarplot <- renderPlot({
+			if (is.null(reactive_data$polarplot)) return()
+			reactive_data$polarplot
+		})
 
     # ----------------- DELETE TEMP FILES WHEN SESSION ENDS ---------------- #
     
