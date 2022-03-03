@@ -96,9 +96,11 @@ ui <- dashboardPage(
 										h4(strong("Visualise mutant kinases")),
 										actionButton("click_polar", "PolarPlot"),
 								    plotOutput("polarplot"),
+										downloadButton('downloadpolarplot','Download Plot'),
 										hr(),
 										actionButton("click_lolli", "LolliPlot"),
-										plotOutput("lolliplot")
+										plotOutput("lolliplot"),
+										downloadButton('downloadlolliplot','Download Plot')
 								  )
 								),
                 box(
@@ -123,7 +125,7 @@ ui <- dashboardPage(
 								),
                 box(
                     width = 12,
-                    downloadButton(outputId = "downloadtree",label= "Download")
+                    downloadButton(outputId = "downloadtree",label= "Download Tree")
                 )
             )
         )
