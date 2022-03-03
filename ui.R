@@ -1,10 +1,25 @@
 #---------------------- UI SIDE ----------------------#
+# load basic libraries
+library(shiny)
+library(shinydashboard)
+library(shinyBS)
+library(readr)
+library(rsvg)
+library(shinyWidgets)
+library(shinycssloaders)
 
-source("coralR/writekinasetree.R")
-source("coralR/colorby.R")
+# load Manning-related libraries
+library(svgPanZoom)
+
+# load ui-related libraries
+library(colourpicker)
+library(DT)
+
 source("lib/Rename.R")
 source("global.R")
 source("db.R")
+source("coralR/writekinasetree.R")
+source("coralR/colorby.R")
 
 ui <- dashboardPage(
     skin = "blue",
@@ -34,7 +49,9 @@ ui <- dashboardPage(
                             width = 4,
                             numericInput(inputId = "cutoff", label = "Remove Values Less Than", 50),
                             textInput(inputId = "kinasefilter", label = "Remove Value from Just_Kinase Column", value = "Cascade")
-                        ),
+                        )
+								    ),
+										fluidRow(
 											  box(width = 8,
 												     selectizeInput(inputId = 'search_cmpd_ids',
 																	label = 'Search by Compound ID',
@@ -68,10 +85,22 @@ ui <- dashboardPage(
                     )
             ),
             tabItem("chart",
-                box(
-                    width = 10,
-                    div(id="treediv")
-                ),
+						    tabBox(
+									id = "charttabs",
+									width = 10,
+									selected = "Kinome Tree",
+									tabPanel("Kinome Tree", 
+										div(id="treediv")
+									),
+									tabPanel("Mutants",
+										h4(strong("Visualise mutant kinases")),
+										actionButton("click_polar", "PolarPlot"),
+								    plotOutput("polarplot"),
+										hr(),
+										actionButton("click_lolli", "LolliPlot"),
+										plotOutput("lolliplot")
+								  )
+								),
                 box(
                   width = 2,
                   selectInput(inputId = "plotresultcolumn", label = "Result Column for Tree", choices = c("Result", "bin_10", "bin_25"), selected = "bin_25", multiple = FALSE),
@@ -89,12 +118,8 @@ ui <- dashboardPage(
                   selectInput(inputId = "node_colours_tgt", label = "Target Nodes", choices = c(), selected = NULL, multiple = TRUE),
 								  colourInput('node_tgt_cpick', '', cpalette[1], showColour = "background"),
 								  hr(),
-                  # selectInput(inputId = "node_colours_offtgt", label = "Off-Target Nodes", choices = c(), selected = NULL, multiple = TRUE),
                   h5(strong("Off-Target Nodes")),
 								  colourInput('node_offtgt_cpick', '', cpalette[2], showColour = "background")
-								  # hr(),
-                  # h5(strong("Neutral Nodes")),
-								  # colourInput('node_net_cpick', '', cpalette[3], showColour = "background")
 								),
                 box(
                     width = 12,
