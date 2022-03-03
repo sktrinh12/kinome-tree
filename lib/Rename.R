@@ -1,10 +1,3 @@
-library(readxl)
-library(writexl)
-library(data.table)
-library(stringr)
-library(dplyr)
-library(textclean)
-library(tidyr)
 
 # regex string generator to find partial matches
 get_match_indices <- function(ls_sp1, ls_sp2, match_values, i) {
@@ -68,12 +61,13 @@ get.hgnc.id <- function(HGNC, pattern ) {
 
 clean_kinase_data <- function(HGNC, kinasedata, manual_map, cutoff=-1E4, kinasefilter="") {
 				if ("PCT_INHIBITION_AVG" %in% names(kinasedata)) {
-								kinasedata <- kinasedata %>%
-																mutate(Result = PCT_INHIBITION_AVG,
-																			 Kinase = KINASE) %>% 
-																select(Kinase, Result)
+				    kinasedata <- kinasedata %>%
+								mutate(Result = PCT_INHIBITION_AVG,
+									   Kinase = KINASE) %>% 
+								select(Kinase, Result)
 				}
-				ht <- HGNC %>%
+
+				reactive_data$ht <- HGNC %>%
 						select(SYMBOL_UPPER, HGNC_ID, SYMBOL) 
 
 				cutoff <- as.integer(cutoff)
@@ -102,7 +96,7 @@ clean_kinase_data <- function(HGNC, kinasedata, manual_map, cutoff=-1E4, kinasef
 									 Just_Kinase = sub("_.*", "", No_Space),
 									 Just_Kinase = stringr::str_to_upper(Just_Kinase)) %>%
 						separate(No_Space, into = c('sp1', 'sp2', 'sp3'), extra = 'drop', remove = FALSE, fill="right") %>%
-						merge(ht, by.x = 'Just_Kinase', by.y = 'SYMBOL_UPPER', all.x = TRUE, all.y = FALSE)
+						merge(reactive_data$ht, by.x = 'Just_Kinase', by.y = 'SYMBOL_UPPER', all.x = TRUE, all.y = FALSE)
 
 				# find rows that have multiple split strings & add index column for counting
 				# primarily aiming for strings like, 'CAPK/ALK3'
@@ -213,15 +207,15 @@ clean_kinase_data <- function(HGNC, kinasedata, manual_map, cutoff=-1E4, kinasef
 
 				# Tag each result with a bin value.
 				kinome_data <- kinome_data %>% 
-												mutate(bin_25 = case_when(Result <= 25 ~ "25", Result <=  50 ~ "50", Result <= 75 ~ "75", 
-																									 Result <= 90 ~ "90", Result > 90 ~ "100"),
-															 bin_10 = case_when(Result <= 10 ~ "10", Result <=  20 ~ "20", Result <= 30 ~ "30", 
-																									 Result <= 40 ~ "40", Result <=  50 ~ "50", Result <= 60 ~ "60", 
-																									 Result <= 70 ~ "70", Result <=  80 ~ "80", Result <= 90 ~ "90", 
-																									 Result > 90 ~ "100") ) %>%
-											  arrange(desc(Result), SYMBOL) %>%
-											  distinct(SYMBOL, .keep_all = T) %>%
-												filter(Just_Kinase != kinasefilter)
+							 mutate(bin_25 = case_when(Result <= 25 ~ "25", Result <=  50 ~ "50", Result <= 75 ~ "75", 
+												  Result <= 90 ~ "90", Result > 90 ~ "100"),
+								    bin_10 = case_when(Result <= 10 ~ "10", Result <=  20 ~ "20", Result <= 30 ~ "30", 
+												  Result <= 40 ~ "40", Result <=  50 ~ "50", Result <= 60 ~ "60", 
+												  Result <= 70 ~ "70", Result <=  80 ~ "80", Result <= 90 ~ "90", 
+												  Result > 90 ~ "100") ) %>%
+						      arrange(desc(Result), SYMBOL) %>%
+						      distinct(SYMBOL, .keep_all = T) %>%
+							 filter(Just_Kinase != kinasefilter)
 												
 				# check for C-MER (one-off situation)
         if (any(grepl(x = kinome_data$Just_Kinase, pattern = "c-mer", ignore.case = T))) {
@@ -236,4 +230,121 @@ clean_kinase_data <- function(HGNC, kinasedata, manual_map, cutoff=-1E4, kinasef
         }
 
 				return(kinome_data)
+}
+
+
+# HANDLE MUTANT KINASES WITH '( )'
+#---------------------------------------------------------------------------
+
+# helper function to recursively regex find alternate kinase names
+regex_alias <- function(the_string) {
+   rtn_c <- c("NA", "NA") 
+   if (the_string == "NA") {return(rtn_c)}
+   pattern <- paste0("(?<![A-Za-z])", the_string, "(?![A-Za-z])") 
+   colnames <- c("SYMBOL", "ALIAS_SYMBOL", "PREV_SYMBOL", "NAME", "PREV_NAME", "ALIAS_NAME") 
+   nbr_rows <- -1
+   cnt <- 1
+   nbr_of_fields <- length(colnames)
+    
+   while (nbr_rows != 1) {
+       hgnc_df <- HGNC %>%
+                filter(grepl(x = !!as.name(colnames[cnt]), 
+                            pattern = pattern,
+                            perl = T,
+                            ignore.case = T)
+                       )
+                    
+        nbr_rows <- nrow(hgnc_df)
+        if (cnt == nbr_of_fields) {break}
+        cnt <- cnt + 1
+   }
+    
+    
+   if (nrow(hgnc_df) != 0) {
+       rtn_c <- c(hgnc_df$SYMBOL, hgnc_df$HGNC_ID)
+   }
+   return(rtn_c)
+}
+
+# find all mutant names and clean up data
+clean_mutkinase_data <- function(HGNC, kinasedata, manual_map, cutoff=50, kinasefilter="") {
+
+   kinasedata <- kinasedata %>% 
+	  filter(grepl(KINASE, pattern = "\\("), !is.na(KINASE)) %>% 
+	  separate(KINASE, into = c("KINASE_SP1", "MUTANT_SP2", "XTRA_SP3"), remove = F, extra = 'drop') %>% 
+    rename(Result = PCT_INHIBITION_AVG) %>%
+	  mutate(KINASE_NAME = case_when(
+			    nchar(KINASE_SP1) < 2 ~ stringr::str_to_upper(MUTANT_SP2),
+			    TRUE ~ KINASE_SP1
+		   ),
+		   KINASE_NAME = case_when(
+				grepl(x = KINASE_NAME, pattern = "aurora", ignore.case = T) ~ paste0(KINASE_NAME, ".{1,}", MUTANT_SP2),
+				grepl(x = KINASE_NAME, pattern = "p38a", ignore.case = T) ~ "MAPK14",
+				grepl(x = KINASE_NAME, pattern = "CK1epsilon", ignore.case = T) ~ "CSNK1E",
+				TRUE ~ KINASE_NAME)
+		   ) %>%
+	  merge(reactive_data$ht, by.x = 'KINASE_NAME', by.y = 'SYMBOL_UPPER', all.x = TRUE, all.y = FALSE) %>%
+       filter(Result >= as.integer(cutoff)) %>%
+	  arrange(KINASE)
+
+    if (nrow(kinasedata) < 1) {
+				return()
+		}
+    
+    dtmp <- kinasedata %>%
+			 mutate(KINASE_CHECK = case_when(
+						  is.na(HGNC_ID) ~ KINASE_NAME,
+						  TRUE ~ "NA")
+			 ) %>%
+			 select(KINASE_CHECK)
+
+    # print(paste('DTMP', paste0(rep('-',20), collapse="")))
+    # print(dtmp)
+
+    kinase_check <- lapply(dtmp$KINASE_CHECK, regex_alias)
+    kinasedata <- kinasedata %>%
+				    mutate(KINASE_CHECK = kinase_check)
+
+    transpose_colm <- t(data.frame(kinasedata$KINASE_CHECK))
+    
+    rename_col1 <- "1"
+    rename_col2 <- "2"
+    kinasedata <- cbind(kinasedata, transpose_colm)
+
+    if (any(grepl(pattern = "V\\d{1}", x = colnames(kinasedata), perl = T))) {
+				rename_col1 <- "V1"
+				rename_col2 <- "V2"
+    }
+
+    kinasedata <- kinasedata %>%
+				rename(SYMBOL_CHECK = !!as.name(rename_col1), HGNC_ID_CHECK = !!as.name(rename_col2)) %>% 
+				mutate(bin_25 = case_when(Result <= 25 ~ "25", Result <=  50 ~ "50", Result <= 75 ~ "75", 
+									 Result <= 90 ~ "90", Result > 90 ~ "100"),
+				       bin_10 = case_when(Result <= 10 ~ "10", Result <=  20 ~ "20", Result <= 30 ~ "30", 
+									 Result <= 40 ~ "40", Result <=  50 ~ "50", Result <= 60 ~ "60", 
+									 Result <= 70 ~ "70", Result <=  80 ~ "80", Result <= 90 ~ "90", 
+									 Result > 90 ~ "100") ) %>%
+				arrange(desc(Result), SYMBOL) %>%
+				filter(!grepl(x = KINASE, pattern = kinasefilter)) %>%
+				mutate(HGNC_ID = case_when(
+												is.na(HGNC_ID) ~ HGNC_ID_CHECK,
+												TRUE ~ HGNC_ID),
+								SYMBOL = case_when(
+												is.na(SYMBOL) ~ SYMBOL_CHECK,
+												TRUE ~ SYMBOL)
+												)
+
+    kinasedata <- kinasedata %>%
+												filter(!is.na(HGNC_ID)) %>%
+												arrange(desc(Result))
+
+    missing_kinasedata <- kinasedata %>%
+												filter(is.na(HGNC_ID)) %>%
+												arrange(desc(Result))
+
+    print(paste('KINASEDATA DATAFRAME', paste0(rep('-',20), collapse="")))
+    print(head(kinasedata))
+    # print(head(missing_kinasedata))
+
+    return(list(kinasedata = kinasedata, missing_kinasedata = missing_kinasedata))
 }
