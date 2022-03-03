@@ -377,6 +377,8 @@ server <- function(input, output, session) {
 				print(paste('SVGINFO MERGED ON KINASEDATA', paste0(rep('-',20), collapse="")))
 				print(dt)
 
+				if (dim(dt)[1] == 0) { stop("No data to plot") }
+
 				NA_to_add <- data.frame(matrix(NA, empty_bars*nlevels(dt$group), ncol(dt)))
 				colnames(NA_to_add) <- colnames(dt)
 				NA_to_add$group <- rep(levels(dt$group), each = empty_bars)
@@ -409,16 +411,16 @@ server <- function(input, output, session) {
 																				ggplot2::theme(
 																								axis.text = ggplot2::element_blank(),
 																								axis.title = ggplot2::element_blank(),
-																								panel.grid = ggplot2::element_blank(),
-																								plot.margin = ggplot2::unit(rep(0,4), "cm")
+																								panel.grid = ggplot2::element_blank()#,
+																								# plot.margin = ggplot2::unit(rep(0,4), "cm")
 																				) + 
 																				ggplot2::coord_polar() + 
 																				ggplot2::geom_text(ggplot2::aes(x = INDEX,
-																							  y = Result+10,
+																							  y = Result+4,
 																							  label = CRO_Kinase,
 																							  hjust = hjust),
 																								color = "black", fontface = "bold", 
-																								alpha = 0.6, size = 3.25, angle = dt$angle) + 
+																								alpha = 0.9, size = 2.5, angle = dt$angle) + 
 																				ggplot2::geom_text(ggplot2::aes(x = INDEX,
 																								y = Result-20,
 																								label = round(Result,1),
@@ -457,8 +459,9 @@ server <- function(input, output, session) {
 				# print(dt)
 
 				dt <- dt %>%
-				 arrange(KINASE_NAME) %>%
+				 arrange(KINASE_NAME,Result) %>%
 				 mutate(CRO_Kinase= factor(CRO_Kinase, levels = CRO_Kinase))
+				if (dim(dt)[1] == 0) { stop("No data to plot") }
 
 				# set colour schema
 				families <- factor(unique(dt$HGNC_SYMBOL))
@@ -491,7 +494,7 @@ server <- function(input, output, session) {
 					  ggplot2::coord_flip() + 
 					  ggplot2::scale_x_discrete(limits=rev) +
 					  ggplot2::ggtitle(paste("Mutant Pct Inb Lolliplot -", input$search_cmpd_ids)) + 
-					  ggplot2::theme(axis.text.y = ggplot2::element_text(size = 14))
+					  ggplot2::theme(axis.text.y = ggplot2::element_text(size = 10))
     })
 
 		output$lolliplot <- renderPlot({
@@ -504,6 +507,21 @@ server <- function(input, output, session) {
 			reactive_data$polarplot
 		})
 
+    output$downloadlolliplot <- downloadHandler(
+        
+        filename <- function(file) { paste("lolliplot_", input$search_cmpd_ids, ".png")},
+        content <- function(file) {
+								ggplot2::ggsave(file, reactive_data$lolliplot)
+        }
+    )
+
+    output$downloadpolarplot <- downloadHandler(
+        
+        filename <- function(file) { paste("polarplot_", input$search_cmpd_ids, ".png")},
+        content <- function(file) {
+								ggplot2::ggsave(file, reactive_data$polarplot)
+        }
+    )
     # ----------------- DELETE TEMP FILES WHEN SESSION ENDS ---------------- #
     
     session$onSessionEnded(function() {
