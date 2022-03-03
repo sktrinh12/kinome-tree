@@ -1,4 +1,11 @@
 #---------------------- GLOBAL DECLARATIONS ----------------------#
+library(RColorBrewer)
+library(readxl)
+library(writexl)
+library(data.table)
+library(stringr)
+library(dplyr)
+library(tidyr)
 
 # options for spinner (loading)
 options(spinner.color="#0275D8", 
@@ -25,7 +32,7 @@ xmlns:xlink=\"http://www.w3.org/1999/xlink\" >\n"
 orig_svginfo$title = ""
 
 # initilize legend
-orig_svginfo$legend = c()
+# orig_svginfo$legend = c()
 
 # add node opacity
 orig_svginfo$dataframe$node.opacity = 0.5 #1
@@ -42,6 +49,7 @@ svginfo$dataframe$branchorder = 1:nrow(svginfo$dataframe)
 
 # Default tree branch color
 BG_col1 = "#D3D3D3"
+empty_bars <- 1
 
 cpalette <- brewer.pal(9, "Set1")
 
@@ -57,7 +65,9 @@ tdf_base_gc <- data.frame(label = c("Target", "Off-Target"),
 
 #XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-reactive_data <- reactiveValues()
+reactive_data <- reactiveValues(lolliplot = NULL,
+																polarplot = NULL,
+																dt = NULL)
 
 HGNC <- data.table(read_excel("data-input/HGNC-protein-coding-genes.xlsx")) %>% 
 				mutate(SYMBOL_UPPER = stringr::str_to_upper(SYMBOL))
