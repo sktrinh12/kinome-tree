@@ -95,11 +95,11 @@ ui <- dashboardPage(
 									tabPanel("Mutants",
 										h4(strong("Visualise mutant kinases")),
 										actionButton("click_polar", "PolarPlot"),
-								    plotOutput("polarplot"),
+								    withSpinner(plotOutput("polarplot"), type = 2),
 										downloadButton('downloadpolarplot','Download Plot'),
 										hr(),
 										actionButton("click_lolli", "LolliPlot"),
-										plotOutput("lolliplot"),
+										withSpinner(plotOutput("lolliplot"), type = 2),
 										downloadButton('downloadlolliplot','Download Plot')
 								  )
 								),
