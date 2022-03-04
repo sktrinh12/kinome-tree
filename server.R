@@ -114,7 +114,7 @@ server <- function(input, output, session) {
 				print(paste('RESIZEDF', paste0(rep('-',20), collapse="")))
 				print(resizedf)
 
-				if (nrow(resizedf) == 0) {
+				if (dim(resizedf)[1] == 0) {
 								createAlert(session, "alert", "resizedf_qcheck", title = "Error",
 									 content = "Cannot map to kinome tree; there was no HGNC match for those kinases", append = FALSE)
 				} else {
@@ -377,7 +377,11 @@ server <- function(input, output, session) {
 				print(paste('SVGINFO MERGED ON KINASEDATA', paste0(rep('-',20), collapse="")))
 				print(dt)
 
-				if (dim(dt)[1] == 0) { stop("No data to plot") }
+				if (dim(dt)[1] == 0) { 
+								createAlert(session, "alert", "dt_polar_qcheck", title = "Error",
+									 content = "No mutant kinase data to plot", append = FALSE)
+								stop("") 
+				}
 
 				NA_to_add <- data.frame(matrix(NA, empty_bars*nlevels(dt$group), ncol(dt)))
 				colnames(NA_to_add) <- colnames(dt)
@@ -406,7 +410,7 @@ server <- function(input, output, session) {
 																				ggplot2::geom_bar(ggplot2::aes(x = as.factor(INDEX), 
 																								y = Result), 
 																								stat = "identity", alpha = 0.7) + 
-																				ggplot2::ylim(-20, 115) + 
+																				ggplot2::ylim(-20, 122) + 
 																				ggplot2::theme_minimal() + 
 																				ggplot2::theme(
 																								axis.text = ggplot2::element_blank(),
@@ -444,9 +448,11 @@ server <- function(input, output, session) {
 				
 				reactive_data$missing <- dt$missing_kinasedata
 
-				if (dim(dt$kinasedata)[1] == 0) { 
-								stop("No data for the provided filters")
-				}
+				# if (dim(dt$kinasedata)[1] == 0) { 
+				# 				createAlert(session, "alert", "dt_lolli_qcheck1", title = "Error",
+				# 					 content = "No data for the provided filters", append = FALSE)
+				# 				stop("")
+				# }
 
 				# replace this var
 				dt <- svginfo$dataframe %>%
@@ -461,7 +467,12 @@ server <- function(input, output, session) {
 				dt <- dt %>%
 				 arrange(KINASE_NAME,Result) %>%
 				 mutate(CRO_Kinase= factor(CRO_Kinase, levels = CRO_Kinase))
-				if (dim(dt)[1] == 0) { stop("No data to plot") }
+
+				if (dim(dt)[1] == 0) { 
+								createAlert(session, "alert", "dt_lolli_qcheck2", title = "Error",
+									 content = "No mutant kinase data to plot", append = FALSE)
+								stop("") 
+				}
 
 				# set colour schema
 				families <- factor(unique(dt$HGNC_SYMBOL))
@@ -494,7 +505,7 @@ server <- function(input, output, session) {
 					  ggplot2::coord_flip() + 
 					  ggplot2::scale_x_discrete(limits=rev) +
 					  ggplot2::ggtitle(paste("Mutant Pct Inb Lolliplot -", input$search_cmpd_ids)) + 
-					  ggplot2::theme(axis.text.y = ggplot2::element_text(size = 10))
+					  ggplot2::theme(axis.text.y = ggplot2::element_text(size = 8))
     })
 
 		output$lolliplot <- renderPlot({
