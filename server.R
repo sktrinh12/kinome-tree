@@ -319,6 +319,16 @@ server <- function(input, output, session) {
           )
   })
 
+  # pass url parameters to the text input
+  observe({
+				  param_query <- parseQueryString(session$clientData$url_search)
+          updateSelectizeInput(session, 
+                              "search_cmpd_ids",
+                              choices = current_cmpd_ids(),
+                              selected = param_query[['search_cmpd_ids']],
+                              server = TRUE
+          )
+  })
 
   # reactively update the experiment id input box with CROs
   output$exp_id_output <- renderUI({
@@ -537,6 +547,6 @@ server <- function(input, output, session) {
     
     session$onSessionEnded(function() {
         if (file.exists(svgoutfile)){file.remove(svgoutfile)}
-				dbDisconnect(conn)
+				# dbDisconnect(conn)
     })
 }
