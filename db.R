@@ -4,10 +4,11 @@
 library(rJava)
 library(RJDBC)
 
-ojdbc_fp <- "/Users/spencer.trinhkinnate.com/lib/ojdbc8.jar"
-access_file <- "/Users/spencer.trinhkinnate.com/Documents/security_files/oracle"
+ojdbc_fp <- file.path("/home", Sys.info()[["login"]], "lib/ojdbc8")
+ojdbc_jarfile <- file.path(ojdbc_fp, "ojdbc8.jar")
 
 # parse access param file
+access_file <- file.path(ojdbc_fp, "oracle")
 access_file <- file(access_file, open = "r")
 
 read_acess_values <- function(access_file) {
@@ -24,7 +25,7 @@ read_acess_values <- function(access_file) {
 }
 
 jdbcDriver <- JDBC(driverClass="oracle.jdbc.OracleDriver", 
-                   classPath=ojdbc_fp)
+                   classPath=ojdbc_jarfile)
 
 ls_vars <- read_acess_values(access_file)
 
