@@ -112,16 +112,18 @@ ui <- dashboardPage(
                   numericInput(inputId = "nodesizemin", label = "Node Size Min", value = 5),
                   numericInput(inputId = "nodesizemax", label = "Node Size Max", value = 30),
                   numericInput(inputId = "nodelabelfontsize", label = "Node Label Font Size", value = 7),
-                  colourInput('nodelabelcolor', 'Node Label Colour', "#1A1818", showColour = "background"),
+                  # colourInput('nodelabelcolor', 'Node Label Colour', "#1A1818", showColour = "background"),
                   numericInput(inputId = "nodeopacity", label = "Node Opacity (default 50%)", value = 50, min = 0, max = 100, step = 5)
                 ),
 								box(
 								  width = 2,
                   selectInput(inputId = "node_colours_tgt", label = "Target Nodes", choices = c(), selected = NULL, multiple = TRUE),
 								  colourInput('node_tgt_cpick', '', cpalette[1], showColour = "background"),
+								  colourInput('text_tgt_cpick', 'Text-label', "#000000", showColour = "background"),
 								  hr(),
                   h5(strong("Off-Target Nodes")),
-								  colourInput('node_offtgt_cpick', '', cpalette[2], showColour = "background")
+								  colourInput('node_offtgt_cpick', '', cpalette[2], showColour = "background"),
+								  colourInput('text_offtgt_cpick', 'Text-label', "#000000", showColour = "background")
 								),
                 box(
                     width = 12,
