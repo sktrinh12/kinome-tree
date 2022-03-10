@@ -170,6 +170,7 @@ resizes.by.value <- function(df,
   # print(dflookup)
   radius.vector[dflookup] = resizedf$radii
   value.vector[dflookup] = resizedf[[sel_colm]]
+  resizedf$dflookup = dflookup
   
-  return (list(radius.vector, value.vector))  
+  return (list(radius.vector, value.vector, resizedf))  
 }
