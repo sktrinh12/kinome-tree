@@ -4,7 +4,13 @@
 library(rJava)
 library(RJDBC)
 
-ojdbc_fp <- file.path("/home", Sys.info()[["login"]], "lib/ojdbc8")
+
+username <- Sys.info()[["effective_user"]]
+root_path <- "/Users"
+
+if (Sys.info()[["sysname"]] == "Linux") {root_path <- "/home"}
+
+ojdbc_fp <- file.path(root_path, username, "lib/ojdbc8")
 ojdbc_jarfile <- file.path(ojdbc_fp, "ojdbc8.jar")
 
 # parse access param file
