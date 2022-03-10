@@ -120,7 +120,19 @@ server <- function(input, output, session) {
 				} else {
 								closeAlert(session, "resizedf_qcheck")
 
+								node_colours <- c(input$node_tgt_cpick,
+																		input$node_offtgt_cpick)
+																
+								label_colours <- c(input$text_tgt_cpick,
+																		input$text_offtgt_cpick)
 
+								hgnc_node_selected <- input$node_colours_tgt
+
+								# default nodes to select
+								if (!isTruthy(hgnc_node_selected)) {
+												hgnc_node_selected <- resizedf$HGNC_SYMBOL[1] # default to top pct inhibitor
+								}
+								
 								# ------------------ NODE SIZE & COLOUR ------------------ #
 
 								# set colors based on selected ids
@@ -138,34 +150,45 @@ server <- function(input, output, session) {
 								)
 								}
 								
+								# ------------------ ARTIFICIALLY INCREASE/DECREASE ---- #
+								# ------------------ NODE SIZES FOR CONTRASTING -------- #
+								if (grepl(x = sel_colm, pattern = "bin")) {
+									resizedf <- radii_and_mapping[[3]] %>% 
+																	mutate(radii = case_when(!!as.name(sel_colm) <= 60 && !!as.name(sel_colm) > 0 ~ radii*0.10,
+																												   !!as.name(sel_colm) <= 90 && !!as.name(sel_colm) > 60 ~ radii*0.50,
+																												   TRUE ~ radii)
+																				)
+								  # reduce size of off-target nodes by half
+								  # re-map the node radii size (for tree and legend)
+								  # resizedf is passed into tdf_node_size downstream
+								  radii_and_mapping[[1]][resizedf$dflookup] <- resizedf$radii
+								  print(resizedf)
+								}
+
+								
 								# ------------------ ADVANCED OPTIONS ------------------ #
 								
 								# Change Color and Size of Font for Selected kinases
 								tempdf <- tempdf %>% mutate(node.selected = ifelse(id.coral %in% resizedf$id.coral, 1, -1),
 														node.radius = radii_and_mapping[[1]],
 														node.val.radius = radii_and_mapping[[2]],
-														text.col = ifelse(node.selected == 1, input$nodelabelcolor, BG_col1), # set selected font color and size
+														# set selected font color and size
+														# text.col = ifelse(node.selected == 1, input$nodelabelcolor, BG_col1), 
 														text.size = ifelse(node.selected == 1, input$nodelabelfontsize, 0), 
 														node.opacity = input$nodeopacity/100,
 														branch.col = BG_col1
 														) 
 
-								colours <- c(input$node_tgt_cpick,
-														input$node_offtgt_cpick)
-																
-								hgnc_node_selected <- input$node_colours_tgt
-								
-								# default nodes to select
-								if (!isTruthy(hgnc_node_selected)) {
-												hgnc_node_selected <- resizedf$HGNC_SYMBOL[1] # default to top pct inhibitor
-								}
 								
                 # set node colours
                 tempdf <- tempdf %>%
                             mutate(node.col = case_when(
-															id.HGNC %in%  hgnc_node_selected ~ colours[1],
-															TRUE ~ colours[2]
-												      )
+															id.HGNC %in%  hgnc_node_selected ~ node_colours[1],
+															TRUE ~ node_colours[2]
+												      ),
+												      text.col = ifelse(node.col == node_colours[1], 
+																								input$text_tgt_cpick, 
+																								input$text_offtgt_cpick)
 													  )
 
                 tdf_group_colour <- tdf_base_gc %>%
@@ -187,10 +210,10 @@ server <- function(input, output, session) {
 																				      cumsum_radius = cumsum(2*node.radius + buffer),
 																							y_pos = ifelse(row_index == 1, y + node.radius, lag(cumsum_radius) + node.radius + y),
 																						  cy_pos = y_pos,
-																						  x_pos = 112.75,
-																						  cx_pos = 117.5,
+																						  x_pos = 140.9432 - (1.25*buffer + max(node.radius)),
+																						  cx_pos = 160.9432,
 																						  radius = node.radius,
-																						  label = !!as.name(sel_colm),
+																						  label = !!as.name(paste0(sel_colm, "_range")),
 																						  colours = BG_col1,
 																						  font_size = 9) %>%
 																				select(-branch.coords)
@@ -333,7 +356,7 @@ server <- function(input, output, session) {
   # reactively update the experiment id input box with CROs
   output$exp_id_output <- renderUI({
       req(input$search_cmpd_ids)
-      exp_id_list <- unique(get_unfil_kdata()$EXPERIMENT_ID)
+      exp_id_list <- sort(unique(get_unfil_kdata()$EXPERIMENT_ID))
       mdata_result <- sapply(exp_id_list, function(x) fetch_exp_mdata(x))
       if (length(mdata_result) > 0) {
         cros_n_expids <- sapply(seq(1:length(exp_id_list)), function(i) {
