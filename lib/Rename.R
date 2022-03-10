@@ -212,7 +212,22 @@ clean_kinase_data <- function(HGNC, kinasedata, manual_map, cutoff=-1E4, kinasef
 								    bin_10 = case_when(Result <= 10 ~ "10", Result <=  20 ~ "20", Result <= 30 ~ "30", 
 												  Result <= 40 ~ "40", Result <=  50 ~ "50", Result <= 60 ~ "60", 
 												  Result <= 70 ~ "70", Result <=  80 ~ "80", Result <= 90 ~ "90", 
-												  Result > 90 ~ "100") ) %>%
+												  Result > 90 ~ "100"),
+								    bin_25_range = case_when(bin_25 == "25" ~ "0-25",
+																				     bin_25 == "50" ~ "26-50",
+																				     bin_25 == "75" ~ "51-75",
+																				     bin_25 == "90" ~ "76-90",
+																				     bin_25 == "100" ~ "90-100"),
+								    bin_10_range = case_when(bin_10 == "10" ~ "0-10",
+																				     bin_10 == "20" ~ "11-20",
+																				     bin_10 == "30" ~ "21-30",
+																				     bin_10 == "40" ~ "31-40",
+																				     bin_10 == "50" ~ "41-50",
+																				     bin_10 == "60" ~ "51-60",
+																				     bin_10 == "70" ~ "61-70",
+																				     bin_10 == "80" ~ "71-80",
+																				     bin_10 == "90" ~ "81-90",
+																				     bin_10 == "100" ~ "91-100") ) %>%
 						      arrange(desc(Result), SYMBOL) %>%
 						      distinct(SYMBOL, .keep_all = T) %>%
 							 filter(Just_Kinase != kinasefilter)
