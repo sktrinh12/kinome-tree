@@ -1,12 +1,18 @@
-#node_tgt_cpick, #node_offtgt_cpick {
+#node_tgt_cpick, #node_offtgt_cpick, #text_tgt_cpick, #text_offtgt_cpick { /* colourpicker */
 				padding: 1px 1px;
 				height: auto; 
 				margin-bottom: 1px;
 				margin-top: -28px;
 }
 
-#node_colours_tgt {
+#node_colours_tgt { /* the multi-select input box */
 				padding: 1px 1px;
 				margin-bottom: -14px;
 				margin-top: 1px;
+}
+
+label[for="text_tgt_cpick"], label[for="text_offtgt_cpick"] {
+				font-size: 10px;
+				position:relative;
+				top:-20px;
 }
