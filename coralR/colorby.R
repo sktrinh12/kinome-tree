@@ -165,9 +165,11 @@ resizes.by.value <- function(df,
   dflookup = match(resizedf$KINASE,df$id.coral)
   
   # update colors and values
+
   # print(radii)
-  print(paste0(rep("-", 20), collapse = ""))
+  # print(paste0(rep("-", 20), collapse = ""))
   # print(dflookup)
+
   radius.vector[dflookup] = resizedf$radii
   value.vector[dflookup] = resizedf[[sel_colm]]
   resizedf$dflookup = dflookup
