@@ -149,7 +149,7 @@ writekinasetree <- function(svginfo,destination,font,labelselect,groupcolor,titl
   # add legend
   legend.node.size.title <- paste0("<text y=\"", 
 																   y - buffer,
-																	"\" x=\"122.9432\" font-family=\"Arial\" font-weight=\"700\" 
+																	"\" x=\"134.9432\" font-family=\"Arial\" font-weight=\"700\" 
 																				letter-spacing=\".035\" font-size=\"9px\">Node Size</text>")
 
   outputlines =  c(outputlines, "<g id=\"NODE_SIZE_LEGEND\">",
