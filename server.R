@@ -100,8 +100,8 @@ server <- function(input, output, session) {
         tempdf$text.font = paste("'","Arial","'",sep="")
         
 				kdata = kinaseDataCleanedFiltered()
-				print(paste('KINASE DATA CLEANED & FILTERED', paste0(rep('-',20), collapse="")))
-				print(kdata)
+				# print(paste('KINASE DATA CLEANED & FILTERED', paste0(rep('-',20), collapse="")))
+				# print(kdata)
 				print(input$plotresultcolumn)        
 
 				sel_colm <- input$plotresultcolumn # either bin10, bin25 or result (drop down menu)
@@ -111,8 +111,8 @@ server <- function(input, output, session) {
 												mutate(KINASE = id.coral, HGNC_SYMBOL = id.HGNC) %>%
 												arrange(HGNC_SYMBOL)
 
-				print(paste('RESIZEDF', paste0(rep('-',20), collapse="")))
-				print(resizedf)
+				# print(paste('RESIZEDF', paste0(rep('-',20), collapse="")))
+				# print(resizedf)
 
 				if (dim(resizedf)[1] == 0) {
 								createAlert(session, "alert", "resizedf_qcheck", title = "Error",
@@ -154,17 +154,20 @@ server <- function(input, output, session) {
 								# ------------------ NODE SIZES FOR CONTRASTING -------- #
 								if (grepl(x = sel_colm, pattern = "bin")) {
 									resizedf <- radii_and_mapping[[3]] %>% 
-																	mutate(radii = case_when(!!as.name(sel_colm) <= 60 && !!as.name(sel_colm) > 0 ~ radii*0.10,
-																												   !!as.name(sel_colm) <= 90 && !!as.name(sel_colm) > 60 ~ radii*0.50,
-																												   TRUE ~ radii)
+																	mutate(radii = case_when(
+																								!!as.name(sel_colm) <= 60 & !!as.name(sel_colm) > 0 ~ radii*0.05,
+																								!!as.name(sel_colm) <= 80 & !!as.name(sel_colm) > 60 ~ radii*0.25,
+																								!!as.name(sel_colm) <= 90 & !!as.name(sel_colm) > 80 ~ radii*0.50,
+																								TRUE ~ radii)
 																				)
 								  # reduce size of off-target nodes by half
 								  # re-map the node radii size (for tree and legend)
 								  # resizedf is passed into tdf_node_size downstream
 								  radii_and_mapping[[1]][resizedf$dflookup] <- resizedf$radii
-								  print(resizedf)
 								}
 
+								print(paste('RESIZEDF-AFTER', paste0(rep('-',20), collapse="")))
+								print(resizedf)
 								
 								# ------------------ ADVANCED OPTIONS ------------------ #
 								
@@ -172,8 +175,7 @@ server <- function(input, output, session) {
 								tempdf <- tempdf %>% mutate(node.selected = ifelse(id.coral %in% resizedf$id.coral, 1, -1),
 														node.radius = radii_and_mapping[[1]],
 														node.val.radius = radii_and_mapping[[2]],
-														# set selected font color and size
-														# text.col = ifelse(node.selected == 1, input$nodelabelcolor, BG_col1), 
+														# set selected font size
 														text.size = ifelse(node.selected == 1, input$nodelabelfontsize, 0), 
 														node.opacity = input$nodeopacity/100,
 														branch.col = BG_col1
