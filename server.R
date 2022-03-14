@@ -117,6 +117,7 @@ server <- function(input, output, session) {
 				if (dim(resizedf)[1] == 0) {
 								createAlert(session, "alert", "resizedf_qcheck", title = "Error",
 									 content = "Cannot map to kinome tree; there was no HGNC match for those kinases", append = FALSE)
+								return()
 				} else {
 								closeAlert(session, "resizedf_qcheck")
 
@@ -361,14 +362,15 @@ server <- function(input, output, session) {
       exp_id_list <- sort(unique(get_unfil_kdata()$EXPERIMENT_ID))
       mdata_result <- sapply(exp_id_list, function(x) fetch_exp_mdata(x))
       if (length(mdata_result) > 0) {
-        cros_n_expids <- sapply(seq(1:length(exp_id_list)), function(i) {
+        meta_data <- sapply(seq(1:length(exp_id_list)), function(i) {
                                   paste0(mdata_result[, i]$EXPERIMENT_ID, " (", 
                                          mdata_result[, i]$PROPERTY_VALUE, ")",
-																				 " [", mdata_result[, i]$CONC, " nM]")
+																				 " [", mdata_result[, i]$CONC, " nM]",
+																				 " [", mdata_result[, i]$ORDER_NUM, "]")
                                 })
         # dropdown menu that allows for selection of experimental id
-        selectInput(inputId = "exp_id", label = "Experiment ID (CRO) [Conc]",
-                  choices = cros_n_expids,
+        selectInput(inputId = "exp_id", label = "Experiment ID (CRO) [Conc] [Order]",
+                  choices = meta_data,
                   selected = NULL, multiple = FALSE)
       } else { return(NULL) }
   })
@@ -399,6 +401,12 @@ server <- function(input, output, session) {
 																input$kinasefilter
 																)
 
+				if (is.null(dt)) { 
+								createAlert(session, "alert", "dt_polar_qcheck", title = "Error",
+									 content = "Filters were too strict", append = FALSE)
+								return() 
+				}
+
 				reactive_data$missing <- dt$missing_kinasedata
 
 				dt <- svginfo$dataframe %>%
@@ -407,7 +415,7 @@ server <- function(input, output, session) {
 								rename(HGNC_SYMBOL = id.HGNC,
 											CRO_Kinase = KINASE) %>%
 								mutate(group = as.factor(HGNC_SYMBOL)) %>%
-								arrange(KINASE_NAME)
+								arrange(KINASE_NAME, Result)
 
 				print(paste('SVGINFO MERGED ON KINASEDATA', paste0(rep('-',20), collapse="")))
 				print(dt)
@@ -415,7 +423,7 @@ server <- function(input, output, session) {
 				if (dim(dt)[1] == 0) { 
 								createAlert(session, "alert", "dt_polar_qcheck", title = "Error",
 									 content = "No mutant kinase data to plot", append = FALSE)
-								stop("") 
+								return()
 				}
 
 				NA_to_add <- data.frame(matrix(NA, empty_bars*nlevels(dt$group), ncol(dt)))
@@ -465,7 +473,7 @@ server <- function(input, output, session) {
 																								label = round(Result,1),
 																								hjust = hjust),
 																								color = "black", fontface = "bold", 
-																								alpha = 0.6, size = 4.25, angle = dt$angle) + 
+																								alpha = 0.6, size = 3.0, angle = dt$angle) + 
 																				ggplot2::ggtitle(paste("Mutant Pct Inb Polar Histogram -", 
 																																input$search_cmpd_ids))  +
 																				colours
@@ -480,14 +488,14 @@ server <- function(input, output, session) {
 												input$cutoff, 
 												input$kinasefilter
 												)
+
+				if (is.null(dt)) { 
+								createAlert(session, "alert", "dt_lolli_qcheck", title = "Error",
+									 content = "Filters were too strict, no data to display", append = FALSE)
+								return() 
+				}
 				
 				reactive_data$missing <- dt$missing_kinasedata
-
-				# if (dim(dt$kinasedata)[1] == 0) { 
-				# 				createAlert(session, "alert", "dt_lolli_qcheck1", title = "Error",
-				# 					 content = "No data for the provided filters", append = FALSE)
-				# 				stop("")
-				# }
 
 				# replace this var
 				dt <- svginfo$dataframe %>%
@@ -504,9 +512,9 @@ server <- function(input, output, session) {
 				 mutate(CRO_Kinase= factor(CRO_Kinase, levels = CRO_Kinase))
 
 				if (dim(dt)[1] == 0) { 
-								createAlert(session, "alert", "dt_lolli_qcheck2", title = "Error",
+								createAlert(session, "alert", "dt_lolli_qcheck", title = "Error",
 									 content = "No mutant kinase data to plot", append = FALSE)
-								stop("") 
+								return() 
 				}
 
 				# set colour schema
@@ -535,12 +543,13 @@ server <- function(input, output, session) {
 							ggplot2::aes(x = CRO_Kinase,
 												   y = Result, 
 												   label = round(Result, 1)), 
-												   nudge_y = -2) + 
+												   nudge_y = -5,
+												   size = 3) + 
 					  colours + 
 					  ggplot2::coord_flip() + 
 					  ggplot2::scale_x_discrete(limits=rev) +
 					  ggplot2::ggtitle(paste("Mutant Pct Inb Lolliplot -", input$search_cmpd_ids)) + 
-					  ggplot2::theme(axis.text.y = ggplot2::element_text(size = 8))
+					  ggplot2::theme(axis.text.y = ggplot2::element_text(size = 7.5))
     })
 
 		output$lolliplot <- renderPlot({
