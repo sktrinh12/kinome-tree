@@ -110,12 +110,13 @@ fetch_exp_mdata <- function(exp_id) {
          WHERE EXPERIMENT_ID = '", exp_id, "' 
          AND PROPERTY_NAME = 'CRO'")
   d <- fetch_data(conn, query_str)
-  query_str <- paste0("SELECT CONC FROM FT_KINASE_PANEL 
+  query_str <- paste0("SELECT CONC, ORDER_NUMBER FROM FT_KINASE_PANEL 
          WHERE EXPERIMENT_ID = '", exp_id, "' 
          FETCH NEXT 1 ROWS ONLY")
 	# get concentration from kinase panel table
-  conc_data <- fetch_data(conn, query_str)
-  d$CONC <- conc_data$CONC
+  d_conc_ordernbr <- fetch_data(conn, query_str)
+  d$CONC <- d_conc_ordernbr$CONC
+  d$ORDER_NUM <- d_conc_ordernbr$ORDER_NUMBER
   return(d)
 }
 
