@@ -11,8 +11,14 @@
 				margin-top: 1px;
 }
 
-label[for="text_tgt_cpick"], label[for="text_offtgt_cpick"] {
+label[for="text_tgt_cpick"], label[for="text_offtgt_cpick"] { /* labels for the text colour picker*/
 				font-size: 10px;
 				position:relative;
 				top:-20px;
+}
+
+#dt_polar_qcheck, #dt_lolli_qcheck, #resizedf_qcheck { /* check if there are any rows of data after data clean up*/
+				background-color: #f93562!important; /*set to red colour*/
+				border-color: #f93562!important;
+				color: #f6f6f6!important;
 }
