@@ -51,9 +51,7 @@ svginfo$dataframe$branchorder = 1:nrow(svginfo$dataframe)
 BG_col1 = "#D3D3D3"
 empty_bars <- 1
 
-cpalette <- brewer.pal(9, "Set1")
-cpalette <- c(cpalette, 
-             colorspace::adjust_transparency(cpalette, alpha = 0.5))
+cpalette <- c(brewer.pal(9, "Set1"), brewer.pal(8, "Set2"))
 
 # base dataframe for group colour legend
 tdf_base_gc <- data.frame(label = c("Target", "Off-Target"),
