@@ -156,8 +156,9 @@ server <- function(input, output, session) {
 								if (grepl(x = sel_colm, pattern = "bin")) {
 									resizedf <- radii_and_mapping[[3]] %>% 
 																	mutate(radii = case_when(
-																								!!as.name(sel_colm) <= 60 & !!as.name(sel_colm) > 0 ~ radii*0.05,
-																								!!as.name(sel_colm) <= 80 & !!as.name(sel_colm) > 60 ~ radii*0.25,
+																								!!as.name(sel_colm) <= 60 & !!as.name(sel_colm) > 0 ~ radii*0.04,
+																								!!as.name(sel_colm) <= 70 & !!as.name(sel_colm) > 60 ~ radii*0.18,
+																								!!as.name(sel_colm) <= 80 & !!as.name(sel_colm) > 70 ~ radii*0.30,
 																								!!as.name(sel_colm) <= 90 & !!as.name(sel_colm) > 80 ~ radii*0.50,
 																								TRUE ~ radii)
 																				)
