@@ -65,7 +65,11 @@ server <- function(input, output, session) {
             paste(input$kinasefile$name, format(Sys.time(), "%Y%m%d"), ".csv", sep = "")
         },
         content = function(file) {
-            write.csv(kinaseData(), file, row.names = FALSE)
+            if (isTruthy(input$kinasefile)) {
+                write.csv(kinaseData(), file, row.names = FALSE)
+            } else {
+                write.csv(reactive_data$df_kd, file, row.names = FALSE)
+            }
         }
     )
     
