@@ -75,11 +75,11 @@ ui <- dashboardPage(
                             downloadButton("downloadInputData", "Download")
                         ),
                         tabPanel("Cleaned Data", 
-                            dataTableOutput("cleanedtable"),
+                            withSpinner(dataTableOutput("cleanedtable"), type = 2),
                             downloadButton("downloadCleanedData", "Download")
                         ),
                         tabPanel("Filtered Data", 
-                                 dataTableOutput("cleanedfilteredtable"),
+                                 withSpinner(dataTableOutput("cleanedfilteredtable"), type = 2),
                                  downloadButton("downloadCleanedFilteredData", "Download")
                         )
                     )
