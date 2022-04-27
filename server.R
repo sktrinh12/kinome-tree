@@ -115,6 +115,7 @@ server <- function(input, output, session) {
 												mutate(KINASE = id.coral, HGNC_SYMBOL = id.HGNC) %>%
 												arrange(HGNC_SYMBOL)
 
+
 				# print(paste('RESIZEDF', paste0(rep('-',20), collapse="")))
 				# print(resizedf)
 
@@ -125,6 +126,22 @@ server <- function(input, output, session) {
 				} else {
 								closeAlert(session, "resizedf_qcheck")
 
+								kdata_dim = dim(kdata)[1]
+								rdf_dim = dim(resizedf)[1]
+								if (kdata_dim != rdf_dim) {
+											missing <- kdata %>% anti_join(resizedf, by = "HGNC_SYMBOL")	
+											# print(paste('MISSING', paste0(rep('-',20), collapse="")))
+								      # print(missing)
+								      missing <- tempdf %>% 
+												select(id.coral, id.HGNC) %>%
+												merge(missing, by.x = "id.coral", by.y = "HGNC_SYMBOL") %>%
+												mutate(KINASE = id.coral, HGNC_SYMBOL = id.HGNC) %>%
+												arrange(HGNC_SYMBOL)
+								      
+								      resizedf <- rbind(resizedf, missing) 
+											# print(paste('RESIZEDF', paste0(rep('-',20), collapse="")))
+											# print(resizedf)
+								}
 								node_colours <- c(input$node_tgt_cpick,
 																		input$node_offtgt_cpick)
 																
@@ -272,7 +289,7 @@ server <- function(input, output, session) {
     
     output$downloadtree <- downloadHandler(
         
-        filename <- function(file) { paste("CORAL",".","tree",".","svg",sep="")},
+        filename <- function(file) { "CORAL.tree.svg" },
         content <- function(file) {
             file.copy(svgoutfile, file)
         }
