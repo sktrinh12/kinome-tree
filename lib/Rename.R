@@ -56,8 +56,39 @@ get.hgnc.id <- function(HGNC, pattern ) {
     if (length(d) > 1) {
         return("")
         }
+    if (length(d) == 0) {
+        return("")
+        }
     return(d)
     }
+
+# helper function to recursively regex find alternate kinase names (return only
+# one value
+regex_iterate_match <- function(pattern) {
+    colnames <- c("SYMBOL", "ALIAS_SYMBOL", "PREV_SYMBOL", "NAME", "PREV_NAME", "ALIAS_NAME") 
+    rtn <- NA
+    nbr_rows <- -1
+    cnt <- 1
+    nbr_of_fields <- length(colnames)
+    pattern = paste0("(^|\\|)", pattern, "(\\||$)")
+
+    while (nbr_rows != 1) {
+       hgnc_df <- HGNC %>%
+                filter(grepl(x = !!as.name(colnames[cnt]), 
+                            pattern = pattern,
+                            perl = T,
+												    ignore.case = T)
+                       )
+
+        nbr_rows <- nrow(hgnc_df)
+        if (nbr_rows == 1) {
+            return(hgnc_df$HGNC_ID)
+            }
+        if (cnt == nbr_of_fields) {break}
+        cnt <- cnt + 1
+    }
+    return(rtn)
+}
 
 clean_kinase_data <- function(HGNC, kinasedata, manual_map, cutoff=-1E4, kinasefilter="") {
 				if ("PCT_INHIBITION_AVG" %in% names(kinasedata)) {
@@ -73,22 +104,23 @@ clean_kinase_data <- function(HGNC, kinasedata, manual_map, cutoff=-1E4, kinasef
 				cutoff <- as.integer(cutoff)
 
 				df <- kinasedata %>% 
-						arrange(Kinase) %>%
+						# arrange(Kinase) %>%
 						filter(Result >= cutoff,
 								   !grepl(pattern = "\\[", x = Kinase), 
 								   !grepl(pattern = "^(?!.*\\/).*\\(.*\\)$", x = Kinase, perl=T) ) %>%
 									 # !grepl(pattern = "/", x = Kinase),
 									 # !grepl(pattern = "-", x = Kinase)) %>%
 						mutate(No_Greek =  case_when(
-							Kinase == "α" ~ "A",
-							Kinase == "β" ~ "B",
-							Kinase == "γ" ~ "G",
-							Kinase == "δ" ~ "D",
-							Kinase == "ε" ~ "E",
-							Kinase == "ζ" ~ "Z",
-							Kinase == "η" ~ "H", 
-							Kinase == "θ" ~ "Q",
-							Kinase == "ι" ~ "I",
+							grepl(pattern = "α", Kinase) ~ gsub("α", "A", Kinase),
+							grepl(pattern = "β", Kinase) ~ gsub("β", "B", Kinase),
+							grepl(pattern = "γ", Kinase) ~ gsub("γ", "G", Kinase),
+							grepl(pattern = "δ", Kinase) ~ gsub("δ", "d", Kinase),
+							grepl(pattern = "ᐃ", Kinase) ~ gsub("ᐃ", "D",Kinase),
+							grepl(pattern = "ε", Kinase) ~ gsub("ε", "E",Kinase),
+							grepl(pattern = "ζ", Kinase) ~ gsub("ζ", "Z",Kinase),
+							grepl(pattern = "η", Kinase) ~ gsub("η","H", Kinase),
+							grepl(pattern = "θ", Kinase) ~ gsub("θ", "Q",Kinase),
+							grepl(pattern = "ι", Kinase) ~ gsub("ι", "I",Kinase),
 							TRUE ~ Kinase
 								)              
 						) %>%
@@ -96,8 +128,10 @@ clean_kinase_data <- function(HGNC, kinasedata, manual_map, cutoff=-1E4, kinasef
 									 Just_Kinase = sub("_.*", "", No_Space),
 									 Just_Kinase = stringr::str_to_upper(Just_Kinase)) %>%
 						separate(No_Space, into = c('sp1', 'sp2', 'sp3'), extra = 'drop', remove = FALSE, fill="right") %>%
-						merge(reactive_data$ht, by.x = 'Just_Kinase', by.y = 'SYMBOL_UPPER', all.x = TRUE, all.y = FALSE)
+						merge(reactive_data$ht, by.x = 'Just_Kinase', by.y = 'SYMBOL_UPPER', all.x = TRUE, all.y = FALSE) %>%
+						arrange(desc(Result)) 
 
+				# write.csv(df, '/Users/spencer.trinhkinnate.com/Downloads/output-df.csv')
 				# find rows that have multiple split strings & add index column for counting
 				# primarily aiming for strings like, 'CAPK/ALK3'
 				dtt <- df %>% 
@@ -105,17 +139,23 @@ clean_kinase_data <- function(HGNC, kinasedata, manual_map, cutoff=-1E4, kinasef
 											 is.na(HGNC_ID)) %>%
 								mutate(INDEX = row_number()) 
 
+				# write.csv(dtt, '/Users/spencer.trinhkinnate.com/Downloads/output.csv')
 				for (i in seq(nrow(dtt))) {
-						p = dtt %>% filter(INDEX == i) %>% select(sp1) %>% pull()
-						x = get.hgnc.id(HGNC, p)
-						if (identical(x, character(0))) {
-								p = dtt %>% filter(INDEX == i) %>% select(sp2) %>% pull()
-								x = get.hgnc.id(HGNC, p)
+						p1 = dtt %>% filter(INDEX == i) %>% select(sp1) %>% pull()
+						x1 = get.hgnc.id(HGNC, p1)
+						if (x1 == "") {
+								p2 = dtt %>% filter(INDEX == i) %>% select(sp2) %>% pull()
+								x2 = get.hgnc.id(HGNC, p2)
+								if (x2 == "") {
+												x1 <- regex_iterate_match(p1) 
+												if (is.na(x1)) {
+														x1 = regex_iterate_match(p2) 
+												} 
+								} else { x1 = rlang::duplicate(x2, shallow=F) }
 								}
-						if (!identical(x, character(0))) {
-								# print(paste0(p, ":", x))
-								tmp.symbol <- HGNC %>% filter(HGNC_ID == x) %>% select(SYMBOL) %>% pull()
-								df <- df %>% mutate(HGNC_ID = replace(HGNC_ID, Result == dtt$Result[i], x),
+						if (!is.na(x1)) {
+								tmp.symbol <- HGNC %>% filter(HGNC_ID == x1) %>% select(SYMBOL) %>% pull()
+								df <- df %>% mutate(HGNC_ID = replace(HGNC_ID, Result == dtt$Result[i], x1),
 																		SYMBOL = replace(SYMBOL, Result == dtt$Result[i], tmp.symbol))
 								}
 						}
@@ -280,6 +320,8 @@ regex_alias <- function(the_string) {
    }
    return(rtn_c)
 }
+
+
 
 # find all mutant names and clean up data
 clean_mutkinase_data <- function(HGNC, kinasedata, manual_map, cutoff=50, kinasefilter="") {
