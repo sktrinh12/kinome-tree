@@ -425,7 +425,7 @@ server <- function(input, output, session) {
 
 				if (is.null(dt)) { 
 								createAlert(session, "alert", "dt_polar_qcheck", title = "Error",
-									 content = "Filters were too strict", append = FALSE)
+									 content = "Could not fetch a valid dataset", append = FALSE)
 								return() 
 				}
 
