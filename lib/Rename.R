@@ -327,7 +327,7 @@ regex_alias <- function(the_string) {
 clean_mutkinase_data <- function(HGNC, kinasedata, manual_map, cutoff=50, kinasefilter="") {
 
    kinasedata <- kinasedata %>% 
-	  filter(grepl(KINASE, pattern = "\\("), !is.na(KINASE)) %>% 
+	  filter(grepl(KINASE, pattern = "[_-]"), !is.na(KINASE)) %>% 
 	  separate(KINASE, into = c("KINASE_SP1", "MUTANT_SP2", "XTRA_SP3"), remove = F, extra = 'drop') %>% 
     rename(Result = PCT_INHIBITION_AVG) %>%
 	  mutate(KINASE_NAME = case_when(
