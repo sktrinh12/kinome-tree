@@ -2,3 +2,4 @@
 tempfiles
 .Rhistory
 *.swp
+*RData
