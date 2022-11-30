@@ -22,3 +22,12 @@ label[for="text_tgt_cpick"], label[for="text_offtgt_cpick"] { /* labels for the 
 				border-color: #f93562!important;
 				color: #f6f6f6!important;
 }
+
+#tooltip {
+  position: absolute;
+  background: cornsilk;
+  border: 1px solid black;
+  border-radius: 5px;
+  padding: 2px;
+	width: auto;
+}
