@@ -92,7 +92,7 @@ server <- function(input, output, session) {
         # print(paste('KINASE DATA CLEANED & FILTERED', paste0(rep('-',20),
         # collapse=''))) print(kdata) print(input$plotresultcolumn)
 
-        sel_colm <- input$plotresultcolumn  # either bin10, bin25 or result (drop down menu)
+        sel_colm <- input$plotresultcolumn  # either bin10, bin25 or ratio (drop down menu)
         resizedf <- tempdf %>%
             select(id.coral, id.HGNC) %>%
             merge(kdata, by.x = "id.HGNC", by.y = "HGNC_SYMBOL") %>%
@@ -137,7 +137,7 @@ server <- function(input, output, session) {
                 if (grepl("ratio", sel_colm)) {
                   idx = which(resizedf$Result == min(resizedf$Result))
                 } else {
-                  idx = 1
+                  idx = which(resizedf$Result == max(resizedf$Result))
                 }
                 hgnc_node_selected <- resizedf$HGNC_SYMBOL[idx]  # default to top pct inhibitor; or lowest for ratio
             }
@@ -146,8 +146,7 @@ server <- function(input, output, session) {
 
             if (grepl("ratio", sel_colm)) {
                 resizedf <- resizedf %>%
-                  mutate(`:=`(!!sel_colm, (Result - min(Result))/(max(Result) - min(Result)) *
-                    100))
+								  mutate(`:=`(!!sel_colm, log(Result)))
             }
 
             # set colors based on selected ids
@@ -229,7 +228,7 @@ server <- function(input, output, session) {
             print(paste("TDF_NODE_SIZE", paste0(rep("-", 20), collapse = "")))
             print(tdf_node_size)
 
-            return(list(tempdf, tdf_node_size, tdf_group_colour))
+            return(list(tempdf, tdf_node_size, tdf_group_colour, resizedf))
 
         }  # end if-else stmt
     })  # end reactive
@@ -245,7 +244,9 @@ server <- function(input, output, session) {
             stop("Error - no data retrieved based on given constraints")
         }
 
-        svginfo$dataframe = df_data[[1]]
+        # join to get the Result column
+        svginfo$dataframe = df_data[[1]] %>% 
+            left_join(df_data[[4]][ , c("id.coral", "Result")])
         svginfo$node_size_legend = df_data[[2]]
         svginfo$node_group_colour = df_data[[3]]
 
