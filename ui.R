@@ -23,7 +23,7 @@ source("coralR/colorby.R")
 
 ui <- dashboardPage(skin = "blue", dashboardHeader(title = "Kinome Tree"), dashboardSidebar(sidebarMenu(menuItem("Data",
     tabName = "data", icon = icon("table")), menuItem("Chart", tabName = "chart",
-    icon = icon("chart-bar")))), dashboardBody(tags$head(tags$link(rel = "stylesheet",
+    icon = icon("chart-bar")))), dashboardBody(tags$head(tags$script(src="js.js"), tags$link(rel = "stylesheet",
     type = "text/css", href = "styles.css")), bsAlert("alert"), tabItems(tabItem("data",
     fluidRow(box(width = 8, fileInput("kinasefile", "Choose Excel File", multiple = FALSE,
         accept = c(".xlsx")), p("Cleaned File: removes Kinase values with a bracket ( [ ), or hyphen (-) but will split text on forward slash ( / ) delimiter. The CRO kinase symbols are converted to HGNC symbols. Each result is tagged with bin values for plotting.")),
@@ -41,7 +41,7 @@ ui <- dashboardPage(skin = "blue", dashboardHeader(title = "Kinome Tree"), dashb
                 "Download")), tabPanel("Filtered Data", withSpinner(dataTableOutput("cleanedfilteredtable"),
             type = 2), downloadButton("downloadCleanedFilteredData", "Download")))),
     tabItem("chart", tabBox(id = "charttabs", width = 10, selected = "Kinome Tree",
-        tabPanel("Kinome Tree", div(id = "treediv")), tabPanel("Mutants", h4(strong("Visualise mutant kinases")),
+        tabPanel("Kinome Tree", div(id = "treediv"), div(id="tooltip")), tabPanel("Mutants", h4(strong("Visualise mutant kinases")),
             actionButton("click_polar", "PolarPlot"), withSpinner(plotOutput("polarplot"),
                 type = 2), downloadButton("downloadpolarplot", "Download Plot"),
             hr(), actionButton("click_lolli", "LolliPlot"), withSpinner(plotOutput("lolliplot"),
