@@ -105,7 +105,7 @@ ui <- dashboardPage(
 								),
                 box(
                   width = 2,
-                  selectInput(inputId = "plotresultcolumn", label = "Result Column for Tree", choices = c("Result", "bin_10", "bin_25"), selected = "bin_25", multiple = FALSE),
+                  selectInput(inputId = "plotresultcolumn", label = "Result Column for Tree", choices = c("ratio", "bin_10", "bin_25"), selected = "bin_25", multiple = FALSE),
                   textInput(inputId = "charttitle", label = "Chart Title"),
                   numericInput(inputId = "titlefontsize", label = "Title Font Size (px)", value = 18),
                   numericInput(inputId = "titley", label = "Title Vertical Position", value = 0),
