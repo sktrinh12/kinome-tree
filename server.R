@@ -106,7 +106,7 @@ server <- function(input, output, session) {
 				kdata = kinaseDataCleanedFiltered()
 				# print(paste('KINASE DATA CLEANED & FILTERED', paste0(rep('-',20), collapse="")))
 				# print(kdata)
-				print(input$plotresultcolumn)        
+				# print(input$plotresultcolumn)        
 
 				sel_colm <- input$plotresultcolumn # either bin10, bin25 or result (drop down menu)
 				resizedf <- tempdf %>% 
@@ -114,7 +114,6 @@ server <- function(input, output, session) {
 												merge(kdata, by.x = "id.HGNC", by.y = "HGNC_SYMBOL") %>%
 												mutate(KINASE = id.coral, HGNC_SYMBOL = id.HGNC) %>%
 												arrange(HGNC_SYMBOL)
-
 
 				# print(paste('RESIZEDF', paste0(rep('-',20), collapse="")))
 				# print(resizedf)
@@ -149,13 +148,23 @@ server <- function(input, output, session) {
 																		input$text_offtgt_cpick)
 
 								hgnc_node_selected <- input$node_colours_tgt
-
+								
 								# default nodes to select
 								if (!isTruthy(hgnc_node_selected)) {
-												hgnc_node_selected <- resizedf$HGNC_SYMBOL[1] # default to top pct inhibitor
+                    if (grepl('ratio', sel_colm)) {
+                        idx = which(resizedf$Result == min(resizedf$Result))
+                } else {
+                        idx = 1
+                    }
+												hgnc_node_selected <- resizedf$HGNC_SYMBOL[idx] # default to top pct inhibitor; or lowest for ratio
 								}
-								
+
 								# ------------------ NODE SIZE & COLOUR ------------------ #
+
+                if (grepl('ratio', sel_colm)) {
+                    resizedf <- resizedf %>%
+                      mutate(!!sel_colm := (Result - min(Result)) / (max(Result) - min(Result))*100  )
+                }
 
 								# set colors based on selected ids
 								if (nrow(resizedf)>0)
@@ -168,7 +177,7 @@ server <- function(input, output, session) {
 										minvalue = 0, 
 										maxvalue = 100, 
 										showall = "hide",
-										sel_colm
+										sel_colm = sel_colm
 								)
 								}
 								
@@ -225,12 +234,22 @@ server <- function(input, output, session) {
 								# combine the input types (result, bins) with the node.radius and misc columns
 								# node size dataframe for reference legend
 
+								# check if 'ratio' selected & add new columns for bins
+								if (grepl('ratio', sel_colm)) {
+												resizedf <- resizedf %>%
+                                mutate(!!as.name(paste0(sel_colm, '_range')) := gsub(pattern = ',', x=gsub(pattern = '\\(|\\]|\\[|\\)', 
+                                                        x = as.character(ggplot2::cut_interval(x = Result, n = 4)), 
+                                        replacement = ''), replacement='-') )
+								}
+
+
+                # write.csv(resizedf, 'tmp-data.csv', row.names = FALSE)
 								tdf_node_size <- tempdf %>%
 																				filter(id.coral %in% resizedf$id.coral) %>%
 																				merge(resizedf, by = c("id.coral", "id.HGNC")) %>%
 																				mutate(!!sel_colm := as.integer(!!as.name(sel_colm))) %>%
 																				arrange(!!as.name(sel_colm)) %>%
-																				distinct(!!as.name(sel_colm), .keep_all = T) %>%
+																				distinct(!!as.name(ifelse(grepl(x=sel_colm, pattern='ratio'), paste0(sel_colm, '_range'), sel_colm)), .keep_all =T) %>%
 																				mutate(row_index = row_number(),
 																				      cumsum_radius = cumsum(2*node.radius + buffer),
 																							y_pos = ifelse(row_index == 1, y + node.radius, lag(cumsum_radius) + node.radius + y),
