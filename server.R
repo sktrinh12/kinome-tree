@@ -172,12 +172,17 @@ server <- function(input, output, session) {
                 radii_and_mapping[[1]][resizedf$dflookup] <- resizedf$radii
             }
 
+            # add new columns for bins & inflate radius size
             if (grepl(x = sel_colm, pattern = "ratio")) {
                 resizedf <- radii_and_mapping[[3]] %>%
                   mutate(radii = case_when(Result <= 1 & Result >
                     0 ~ radii * 4.25, Result <= 10 & Result >
                     1 ~ radii * 2, Result <= 100 & Result >
-                    10 ~ radii * 1.25, TRUE ~ radii))
+                    10 ~ radii * 1.25, TRUE ~ radii), 
+                    `:=`(!!as.name(paste0(sel_colm, "_range")), gsub(pattern = ",",
+                    x = gsub(pattern = "\\(|\\]|\\[|\\)", x = as.character(ggplot2::cut_interval(x = Result,
+                      n = 4)), replacement = ""), replacement = "-")) )
+
                 radii_and_mapping[[1]][resizedf$dflookup] <- resizedf$radii
             }
 
@@ -209,14 +214,6 @@ server <- function(input, output, session) {
 
             # combine the input types (result, bins) with the node.radius and
             # misc columns node size dataframe for reference legend
-
-            # check if 'ratio' selected & add new columns for bins
-            if (grepl("ratio", sel_colm)) {
-                resizedf <- resizedf %>%
-                  mutate(`:=`(!!as.name(paste0(sel_colm, "_range")), gsub(pattern = ",",
-                    x = gsub(pattern = "\\(|\\]|\\[|\\)", x = as.character(ggplot2::cut_interval(x = Result,
-                      n = 4)), replacement = ""), replacement = "-")))
-            }
 
 
             # write.csv(resizedf, 'tmp-data.csv', row.names = FALSE)
