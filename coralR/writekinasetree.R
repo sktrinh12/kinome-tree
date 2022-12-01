@@ -62,10 +62,6 @@ build.text <- function(l, labelselect) {
         label, "</text>", "</a>", sep = "")
     return(label)
 }
-# # mouse over effects ' \nonmouseover=\'evt.target.setAttribute('font-size',
-# '10');\'', '
-# \nonmouseout=\'evt.target.setAttribute('font-size','',origfontsize,'');\'',
-
 
 
 # Define a function that makes a node
@@ -76,7 +72,8 @@ build.node <- function(l) {
 
     circle = paste("<circle id=\"n_x5F_", l["id.coral"], "\" ", "cx=\"", l["node.x"],
         "\" cy=\"", gsub(" ", "", l["node.y"]), "\" r=\"", l["node.radius"], "\" opacity=\"",
-        l["node.opacity"], "\" fill=\"", l["node.col"], "\"/>", sep = "")
+        l["node.opacity"], "\" fill=\"", l["node.col"], "\" onmousemove=\"showTooltip(evt, '",
+        l["Result"], "');\" onmouseout=\"hideTooltip();\" />", sep = "")
     return(circle)
 }
 
@@ -86,8 +83,7 @@ build.node.legend <- function(df) {
            <g> 
            <circle cy=\"", df["cy_pos"],
         "\" cx=\"", df["cx_pos"], "\" r=\"", df["radius"], "\" style=\"fill: ", df["colours"],
-        ";\"> 
-\t\t\t\t   </circle>
+        ";\"></circle>
            <text font-family=\"Arial\" font-size=\"",
         df["font_size"], "px\" y=\"", df["y_pos"], "\" x=\"", df["x_pos"], "\">",
         df["label"], "</text>
@@ -153,14 +149,14 @@ writekinasetree <- function(svginfo, destination, font, labelselect, groupcolor,
 
     # add legend
     legend.node.size.title <- paste0("<text y=\"", y - buffer, "\" x=\"134.9432\" font-family=\"Arial\" font-weight=\"700\" 
-\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tletter-spacing=\".035\" font-size=\"9px\">Node Size</text>")
+        letter-spacing=\".035\" font-size=\"9px\">Node Size</text>")
 
     outputlines = c(outputlines, "<g id=\"NODE_SIZE_LEGEND\">", legend.node.size.title,
         unlist(apply(svginfo$node_size_legend, 1, build.node.legend)), "</g>")
 
     outputlines = c(outputlines, "<g id=\"NODE_COLOUR_LEGEND\">
-                 <text y=\"330.5\" x=\"716.5\" font-family=\"Arial\" 
-\t\t\t\t\t\t\t\t  font-weight=\"700\" letter-spacing=\".035\" font-size=\"9px\">Node Colours</text>",
+            <text y=\"330.5\" x=\"716.5\" font-family=\"Arial\" 
+            font-weight=\"700\" letter-spacing=\".035\" font-size=\"9px\">Node Colours</text>",
         unlist(apply(svginfo$node_group_colour, 1, build.node.legend)), "</g>")
 
     outputlines = c(outputlines, "</svg>")
