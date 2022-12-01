@@ -172,6 +172,15 @@ server <- function(input, output, session) {
                 radii_and_mapping[[1]][resizedf$dflookup] <- resizedf$radii
             }
 
+            if (grepl(x = sel_colm, pattern = "ratio")) {
+                resizedf <- radii_and_mapping[[3]] %>%
+                  mutate(radii = case_when(Result <= 1 & Result >
+                    0 ~ radii * 4.25, Result <= 10 & Result >
+                    1 ~ radii * 2, Result <= 100 & Result >
+                    10 ~ radii * 1.25, TRUE ~ radii))
+                radii_and_mapping[[1]][resizedf$dflookup] <- resizedf$radii
+            }
+
             print(paste("RESIZEDF-AFTER", paste0(rep("-", 20), collapse = "")))
             print(resizedf)
 
