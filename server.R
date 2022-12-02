@@ -233,7 +233,7 @@ server <- function(input, output, session) {
           resizedf$radii
       }
       
-      # add new columns for bins & inflate radius size
+      # add new columns for bins & inflate radius size when 'ratio'
       if (grepl(x = sel_colm, pattern = "ratio")) {
         resizedf <- radii_and_mapping[[3]] %>%
           mutate(
@@ -244,6 +244,7 @@ server <- function(input, output, session) {
                 1 ~ radii * 2,
               Result <= 100 & Result >
                 10 ~ radii * 1.25,
+              Result > 900 ~ radii * 0.7,
               TRUE ~ radii
             ),
             `:=`(
@@ -330,7 +331,7 @@ server <- function(input, output, session) {
               node.radius + y
           ),
           cy_pos = y_pos,
-          x_pos = 140.9432 - (1.25 * buffer +
+          x_pos = 153.9432 - (1.25 * buffer +
                                 max(node.radius)),
           cx_pos = 160.9432,
           radius = node.radius,
