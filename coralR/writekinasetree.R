@@ -130,7 +130,7 @@ build.node.legend <- function(df) {
     "\" style=\"fill: ",
     df["colours"],
     ";\"></circle>
-    <text font-family=\"Arial\" font-size=\"",
+    <text font-family=\"Arial\" text-anchor=\"end\" font-size=\"",
     df["font_size"],
     "px\" y=\"",
     df["y_pos"],
