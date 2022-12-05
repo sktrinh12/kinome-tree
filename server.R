@@ -249,16 +249,11 @@ server <- function(input, output, session) {
             ),
             `:=`(
               !!as.name(paste0(sel_colm, "_range")),
-              gsub(
-                pattern = ",",
-                x = gsub(
-                  pattern = "\\(|\\]|\\[|\\)",
-                  x = as.character(ggplot2::cut_interval(x = Result,
-                                                         n = 4)),
-                  replacement = ""
-                ),
-                replacement = "-"
-              )
+              case_when(Result <= 1 & Result > 0 ~ "0-1",
+                        Result <= 10 & Result > 1 ~ "1-10",
+                        Result <= 100 & Result > 10 ~ "10-100",
+                        Result >= 100 ~ ">100"
+                        )
             )
           )
         
