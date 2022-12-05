@@ -117,7 +117,7 @@ build.node <- function(l) {
 }
 
 # Define a function that makes a generic legend
-build.node.legend <- function(df) {
+build.node.legend <- function(df, text_anchor) {
   node.g <- paste0(
     "
     <g>
@@ -130,7 +130,9 @@ build.node.legend <- function(df) {
     "\" style=\"fill: ",
     df["colours"],
     ";\"></circle>
-    <text font-family=\"Arial\" text-anchor=\"end\" font-size=\"",
+    <text font-family=\"Arial\" text-anchor=\"",
+    text_anchor,
+    "\" font-size=\"",
     df["font_size"],
     "px\" y=\"",
     df["y_pos"],
@@ -238,7 +240,7 @@ writekinasetree <-
       "<g id=\"NODE_SIZE_LEGEND\">",
       legend.node.size.title,
       unlist(apply(
-        svginfo$node_size_legend, 1, build.node.legend
+        svginfo$node_size_legend, 1, build.node.legend, text_anchor = "end"
       )),
       "</g>"
     )
@@ -249,7 +251,8 @@ writekinasetree <-
             <text y=\"330.5\" x=\"716.5\" font-family=\"Arial\"
             font-weight=\"700\" letter-spacing=\".035\" font-size=\"9px\">Node Colours</text>",
       unlist(apply(
-        svginfo$node_group_colour, 1, build.node.legend
+        svginfo$node_group_colour, 1, build.node.legend, text_anchor = "start"
+
       )),
       "</g>"
     )
