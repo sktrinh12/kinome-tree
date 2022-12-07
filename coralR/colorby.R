@@ -117,10 +117,10 @@ invert_maxmin <- function(vector.x) {
         as.integer(x)))
     # find the float numbers in the rank vectors
     asc_not_int <-
-      which(sapply(rank_dsc, function(x)
+      which(sapply(rank_asc, function(x)
         is_integer(x)) == F)
     dsc_not_int <-
-      which(sapply(rank_asc, function(x)
+      which(sapply(rank_dsc, function(x)
         is_integer(x)) == F)
     # set the first dup as the missing index
     rank_dsc[dsc_not_int[1]] <- missing_idx_dsc
