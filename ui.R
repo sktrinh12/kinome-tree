@@ -51,7 +51,7 @@ ui <-
                 accept = c(".xlsx")
               ),
               p(
-                "Cleaned File: removes Kinase values with a bracket ( [ ), or hyphen (-) but will split text on forward slash ( / ) delimiter. The CRO kinase symbols are converted to HGNC symbols. Each result is tagged with bin values for plotting."
+                "Cleaned File: removes Kinase values with a bracket ( [ ), or hyphen (-) but will split text on forward slash ( / ) delimiter. The CRO kinase symbols are converted to HGNC symbols. Each result is tagged with bin values for plotting. Ensure column name is titled as 'Result'"
               )
             ),
             box(
