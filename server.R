@@ -38,6 +38,22 @@ server <- function(input, output, session) {
       req(input$search_cmpd_ids, input$exp_id, input$tech_id)
       dt <- reactive_data$df_f
     }
+
+    # update the node selection for target nodes
+    updateSelectInput(
+      session,
+      "node_colours_tgt",
+      choices = dt$HGNC_SYMBOL,
+      selected = NULL
+    )
+    
+    # update the node selection for off target nodes
+    updateSelectizeInput(
+      session,
+      "node_colours_offtgt",
+      choices = dt$HGNC_SYMBOL,
+      selected = NULL
+    )
     
     return(dt)
   })
@@ -427,23 +443,6 @@ server <- function(input, output, session) {
                         manual_map,
                         input$cutoff,
                         input$kinasefilter)
-    
-    # update the node selection for target nodes
-    updateSelectInput(
-      session,
-      "node_colours_tgt",
-      choices = reactive_data$df_f$HGNC_SYMBOL,
-      selected = NULL
-    )
-    
-    
-    # update the node selection for off target nodes
-    updateSelectizeInput(
-      session,
-      "node_colours_offtgt",
-      choices = reactive_data$df_f$HGNC_SYMBOL,
-      selected = NULL
-    )
     
   })
   
