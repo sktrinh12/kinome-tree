@@ -109,7 +109,6 @@ clean_kinase_data <-
   function(HGNC,
            kinasedata,
            manual_map,
-           cutoff = -10000,
            kinasefilter = "") {
     if ("PCT_INHIBITION_AVG" %in% names(kinasedata)) {
       kinasedata <- kinasedata %>%
@@ -120,12 +119,10 @@ clean_kinase_data <-
     reactive_data$ht <- HGNC %>%
       select(SYMBOL_UPPER, HGNC_ID, SYMBOL)
     
-    cutoff <- as.integer(cutoff)
     
     df <- kinasedata %>%
       # arrange(Kinase) %>%
       filter(
-        Result >= cutoff,
         !grepl(pattern = "\\[", x = Kinase),
         !grepl(
           pattern = "^(?!.*\\/).*\\(.*\\)$",

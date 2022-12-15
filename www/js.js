@@ -11,12 +11,20 @@ function hideTooltip() {
   tooltip.style.display = "none";
 }
 
-Shiny.addCustomMessageHandler("resetFileInputHandler", function(elementId) {      
+Shiny.addCustomMessageHandler("resetFileInputHandlerHide", function(elementId) {      
 				//alert('testing');
 				var id = elementId + "_progress";      
 				var elem = document.getElementById(id);
 				elem.style.visibility = "hidden";
 				elem.firstChild.nextElementSibling.style.width = "0%";
+});
+
+Shiny.addCustomMessageHandler("resetFileInputHandlerShow", function(elementId) {      
+				alert('testing');
+				var id = elementId + "_progress";      
+				var elem = document.getElementById(id);
+				elem.style.visibility = "visible";
+				elem.firstChild.nextElementSibling.style.width = "100%";
 });
 
 function toggle(elementId) {
