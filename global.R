@@ -40,7 +40,7 @@ orig_svginfo$dataframe$node.selected = -1
 # make svginfo (leaving the original intact)
 svginfo = orig_svginfo
 
-# assi node and branch orders
+# assign node and branch orders
 svginfo$dataframe$nodeorder = 1:nrow(svginfo$dataframe)
 svginfo$dataframe$branchorder = 1:nrow(svginfo$dataframe)
 
