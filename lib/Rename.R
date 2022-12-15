@@ -176,7 +176,6 @@ clean_kinase_data <-
       ) %>%
       arrange(desc(Result))
     
-    # write.csv(df, '/Users/spencer.trinhkinnate.com/Downloads/output-df.csv')
     # find rows that have multiple split strings & add index column for
     # counting primarily aiming for strings like, 'CAPK/ALK3'
     dtt <- df %>%
