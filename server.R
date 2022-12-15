@@ -3,6 +3,8 @@
 server <- function(input, output, session) {
   kinaseData <- reactive({
     req(input$kinasefile)
+    # print(input$kinasefile)
+    dt <- data.frame()
     tryCatch({
       dt <- data.table(readxl::read_xlsx(input$kinasefile$datapath))
     }, error = function(e) {
@@ -12,6 +14,12 @@ server <- function(input, output, session) {
     return(dt)
   })
   
+
+  observeEvent(input$kinasefile, {
+      reactive_data$df_kd <- clean_kinase_data(HGNC, kinaseData(), manual_map)
+  })
+
+
   kinaseDataCleaned <- reactive({
     req(isTruthy(input$kinasefile) || isTruthy(input$submit))
     if (isTruthy(input$kinasefile)) {
@@ -57,9 +65,11 @@ server <- function(input, output, session) {
     
     return(dt)
   })
+
+
   
   output$kinasetable <- renderDataTable({
-    datatable(kinaseData(), options = list(pageLength = 25))
+    datatable(reactive_data$df_kd, options = list(pageLength = 25))
   })
   
   output$cleanedtable <- renderDataTable({
@@ -131,6 +141,7 @@ server <- function(input, output, session) {
       showTab(inputId = 'charttabs', target = 'Mutants')
     }
   })
+
   newdf <- reactive({
     # get current values
     tempdf = svginfo$dataframe
@@ -403,7 +414,7 @@ server <- function(input, output, session) {
   
   output$downloadtree <-
     downloadHandler(filename <- function(file) {
-      "CORAL.tree.svg"
+      "kinome.tree.svg"
     }, content <- function(file) {
       file.copy(svgoutfile, file)
     })
@@ -424,13 +435,14 @@ server <- function(input, output, session) {
   
   # show the final df from compd_id and experiment id after clicking Submit
   observeEvent(input$submit, {
+    # hide progress bar for excel file input
+    session$sendCustomMessage("resetFileInputHandler", "kinasefile") 
     req(input$search_cmpd_ids, input$exp_id, input$tech_id)
+
     # Return the final kinome dataset (single exp id + tech)
     reactive_data$df_kd <-
       fetch_f_kdata(input$search_cmpd_ids, input$exp_id,
                     input$tech_id)
-    output$kinasetable <-
-      renderDataTable(reactive_data$df_kd, options = list(pageLength = 25))
     
     # cleaned data
     reactive_data$df_c <-
@@ -443,7 +455,6 @@ server <- function(input, output, session) {
                         manual_map,
                         input$cutoff,
                         input$kinasefilter)
-    
   })
   
   # poll the unique values every 1x10^6 milliseconds (~17 mins)
