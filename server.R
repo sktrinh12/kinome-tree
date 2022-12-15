@@ -13,45 +13,48 @@ server <- function(input, output, session) {
     })
     return(dt)
   })
-  
 
-  observeEvent(input$kinasefile, {
-      reactive_data$df_kd <- clean_kinase_data(HGNC, kinaseData(), manual_map)
-  })
-
-
-  kinaseDataCleaned <- reactive({
+  # show the final df from compd_id and experiment id after clicking Submit or
+  # uploading file
+  observeEvent(c(input$kinasefile, input$submit), {
     req(isTruthy(input$kinasefile) || isTruthy(input$submit))
-    if (isTruthy(input$kinasefile)) {
-      dt <- clean_kinase_data(HGNC, kinaseData(), manual_map)
-    }
-    if (isTruthy(input$submit)) {
+    if (input$submit) {
+      # hide progress bar for excel file input
+      session$sendCustomMessage("resetFileInputHandler", "kinasefile") 
+
       req(input$search_cmpd_ids, input$exp_id, input$tech_id)
-      dt <- reactive_data$df_c
-    }
-    return(dt)
-  })
-  
-  kinaseDataCleanedFiltered <- reactive({
-    req(isTruthy(input$kinasefile) || isTruthy(input$submit))
-    if (isTruthy(input$kinasefile)) {
-      dt <-
+
+      # Return the final kinome dataset (single exp id + tech)
+      reactive_data$df_kd <-
+        fetch_f_kdata(input$search_cmpd_ids, input$exp_id,
+                      input$tech_id)
+      
+      # cleaned data
+      reactive_data$df_c <-
+        clean_kinase_data(HGNC, reactive_data$df_kd, manual_map)
+      
+      # cleaned & filtered data
+      reactive_data$df_f <-
         clean_kinase_data(HGNC,
-                          kinaseData(),
+                          reactive_data$df_kd,
+                          manual_map,
+                          input$cutoff,
+                          input$kinasefilter)
+    } else {
+      print('test')
+      reactive_data$df_kd <- kinaseData()
+      reactive_data$df_c <-  clean_kinase_data(HGNC, reactive_data$df_kd, manual_map)
+      reactive_data$df_f <- clean_kinase_data(HGNC,
+                          reactive_data$df_kd,
                           manual_map,
                           input$cutoff,
                           input$kinasefilter)
     }
-    if (isTruthy(input$submit)) {
-      req(input$search_cmpd_ids, input$exp_id, input$tech_id)
-      dt <- reactive_data$df_f
-    }
-
     # update the node selection for target nodes
     updateSelectInput(
       session,
       "node_colours_tgt",
-      choices = dt$HGNC_SYMBOL,
+      choices = reactive_data$df_f$HGNC_SYMBOL,
       selected = NULL
     )
     
@@ -59,12 +62,42 @@ server <- function(input, output, session) {
     updateSelectizeInput(
       session,
       "node_colours_offtgt",
-      choices = dt$HGNC_SYMBOL,
+      choices = reactive_data$df_f$HGNC_SYMBOL,
       selected = NULL
     )
-    
-    return(dt)
   })
+
+
+  # kinaseDataCleaned <- reactive({
+  #   req(isTruthy(input$kinasefile) || isTruthy(input$submit))
+  #   if (isTruthy(input$kinasefile)) {
+  #     dt <- clean_kinase_data(HGNC, kinaseData(), manual_map)
+  #   }
+  #   if (isTruthy(input$submit)) {
+  #     req(input$search_cmpd_ids, input$exp_id, input$tech_id)
+  #     dt <- reactive_data$df_c
+  #   }
+  #   return(dt)
+  # })
+  
+  # kinaseDataCleanedFiltered <- reactive({
+  #   req(isTruthy(input$kinasefile) || isTruthy(input$submit))
+  #   if (isTruthy(input$kinasefile)) {
+  #     dt <-
+  #       clean_kinase_data(HGNC,
+  #                         kinaseData(),
+  #                         manual_map,
+  #                         input$cutoff,
+  #                         input$kinasefilter)
+  #   }
+    # if (isTruthy(input$submit)) {
+    #   req(input$search_cmpd_ids, input$exp_id, input$tech_id)
+    #   dt <- reactive_data$df_f
+    # }
+
+    
+    # return(dt)
+  # })
 
 
   
@@ -73,11 +106,11 @@ server <- function(input, output, session) {
   })
   
   output$cleanedtable <- renderDataTable({
-    datatable(kinaseDataCleaned(), options = list(pageLength = 25))
+    datatable(reactive_data$df_c, options = list(pageLength = 25))
   })
   
   output$cleanedfilteredtable <- renderDataTable({
-    datatable(kinaseDataCleanedFiltered(), options = list(pageLength = 25))
+    datatable(reactive_data$df_f, options = list(pageLength = 25))
   })
   
   output$downloadInputData <-
@@ -121,7 +154,7 @@ server <- function(input, output, session) {
               sep = "")
       },
       content = function(file) {
-        write.csv(kinaseDataCleanedFiltered(), file, row.names = FALSE)
+        write.csv(reactive_data$df_f, file, row.names = FALSE)
       }
     )
   
@@ -149,7 +182,7 @@ server <- function(input, output, session) {
     # set font family
     tempdf$text.font = paste("'", "Arial", "'", sep = "")
     
-    kdata = kinaseDataCleanedFiltered()
+    kdata = reactive_data$df_f 
     
     # print(paste('KINASE DATA CLEANED & FILTERED', paste0(rep('-',20), collapse='')))
     # print(kdata) print(input$plotresultcolumn)
@@ -433,29 +466,6 @@ server <- function(input, output, session) {
     fetch_f_kdata(input$search_cmpd_ids, input$exp_id)
   })
   
-  # show the final df from compd_id and experiment id after clicking Submit
-  observeEvent(input$submit, {
-    # hide progress bar for excel file input
-    session$sendCustomMessage("resetFileInputHandler", "kinasefile") 
-    req(input$search_cmpd_ids, input$exp_id, input$tech_id)
-
-    # Return the final kinome dataset (single exp id + tech)
-    reactive_data$df_kd <-
-      fetch_f_kdata(input$search_cmpd_ids, input$exp_id,
-                    input$tech_id)
-    
-    # cleaned data
-    reactive_data$df_c <-
-      clean_kinase_data(HGNC, reactive_data$df_kd, manual_map)
-    
-    # cleaned & filtered data
-    reactive_data$df_f <-
-      clean_kinase_data(HGNC,
-                        reactive_data$df_kd,
-                        manual_map,
-                        input$cutoff,
-                        input$kinasefilter)
-  })
   
   # poll the unique values every 1x10^6 milliseconds (~17 mins)
   current_cmpd_ids <-
