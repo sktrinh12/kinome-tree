@@ -1,19 +1,6 @@
 #---------------------- SERVER SIDE ----------------------#
 
 server <- function(input, output, session) {
-  kinaseData <- reactive({
-    req(input$kinasefile)
-    # print(input$kinasefile)
-    dt <- data.frame()
-    tryCatch({
-      dt <- data.table(readxl::read_xlsx(input$kinasefile$datapath))
-    }, error = function(e) {
-      # return a safeError if a parsing error occurs
-      stop(safeError(e))
-    })
-    return(dt)
-  })
-
   
   # cleaned & filtered data
   observeEvent(input$cutoff, {
@@ -27,22 +14,11 @@ server <- function(input, output, session) {
         choices = reactive_data$df_f$HGNC_SYMBOL,
         selected = NULL
       )
-      
-      # update the node selection for off target nodes
-      updateSelectizeInput(
-        session,
-        "node_colours_offtgt",
-        choices = reactive_data$df_f$HGNC_SYMBOL,
-        selected = NULL
-      )
     }
   })
 
-  # show the final df from compd_id and experiment id after clicking Submit or
-  # uploading file
-  observeEvent(c(input$kinasefile, input$submit), {
-    req(isTruthy(input$kinasefile) || isTruthy(input$submit))
-    if (input$submit) {
+  # show the final df from compd_id and experiment id after clicking Submit
+  observeEvent(input$submit, {
       # hide progress bar for excel file input
       session$sendCustomMessage("resetFileInputHandlerHide", "kinasefile") 
 
@@ -59,25 +35,28 @@ server <- function(input, output, session) {
       
       # cleaned & filtered data
       reactive_data$df_f <- reactive_data$df_c %>% filter(Result > as.integer(input$cutoff))
-    } else {
+
+      # update the node selection for target nodes
+      updateSelectInput(
+        session,
+        "node_colours_tgt",
+        choices = reactive_data$df_f$HGNC_SYMBOL,
+        selected = NULL
+      )
+  })
+
+  # uploading file
+  observeEvent(input$kinasefile, {
+      req(input$kinasefile)
       session$sendCustomMessage("resetFileInputHandlerShow", "kinasefile") 
-      reactive_data$df_kd <- kinaseData()
+      reactive_data$df_kd <- data.table(readxl::read_xlsx(input$kinasefile$datapath))
       reactive_data$df_c <-  clean_kinase_data(HGNC, reactive_data$df_kd, manual_map)
       reactive_data$df_f <- reactive_data$df_c %>% filter(Result > as.integer(input$cutoff))
-    }
 
     # update the node selection for target nodes
     updateSelectInput(
       session,
       "node_colours_tgt",
-      choices = reactive_data$df_f$HGNC_SYMBOL,
-      selected = NULL
-    )
-    
-    # update the node selection for off target nodes
-    updateSelectizeInput(
-      session,
-      "node_colours_offtgt",
       choices = reactive_data$df_f$HGNC_SYMBOL,
       selected = NULL
     )
@@ -105,7 +84,7 @@ server <- function(input, output, session) {
       },
       content = function(file) {
         if (isTruthy(input$kinasefile)) {
-          write.csv(kinaseData(), file, row.names = FALSE)
+          write.csv(reactive_data$df_kd, file, row.names = FALSE)
         } else {
           write.csv(reactive_data$df_kd, file, row.names = FALSE)
         }
@@ -122,7 +101,7 @@ server <- function(input, output, session) {
               sep = "")
       },
       content = function(file) {
-        write.csv(kinaseDataCleaned(), file, row.names = FALSE)
+        write.csv(reactive_data$df_c, file, row.names = FALSE)
       }
     )
   
