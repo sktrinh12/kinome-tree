@@ -10,3 +10,21 @@ function hideTooltip() {
   var tooltip = document.getElementById("tooltip");
   tooltip.style.display = "none";
 }
+
+Shiny.addCustomMessageHandler("resetFileInputHandler", function(elementId) {      
+				//alert('testing');
+				var id = elementId + "_progress";      
+				var elem = document.getElementById(id);
+				elem.style.visibility = "hidden";
+				elem.firstChild.nextElementSibling.style.width = "0%";
+});
+
+function toggle(elementId) {
+    var ele = document.getElementById(elementId);
+    if(ele.style.display == "block") {
+            ele.style.display = "none";
+    }
+    else {
+        ele.style.display = "block";
+    }
+} 
