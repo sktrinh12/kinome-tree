@@ -68,4 +68,4 @@ ENV SID=$SID
 ENV USERNAME=$USERNAME
 ENV PASSWORD=$PASSWORD
 
-CMD ["bash"]
+CMD ["R", "-e", "shiny::runApp('/home/shiny/app/kinome-tree', host= '0.0.0.0', port = 3838)"]
