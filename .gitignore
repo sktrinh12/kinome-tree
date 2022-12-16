@@ -3,3 +3,5 @@ tempfiles
 .Rhistory
 *.swp
 *RData
+.Rhistory
+renv
