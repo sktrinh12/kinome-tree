@@ -36,6 +36,8 @@ RUN cd kinome-tree && Rscript -e 'renv::restore()'\
 
 RUN sudo R CMD INSTALL\
   --configure-args="--with-oci-lib=/usr/lib/oracle/19.17/client64/lib --with-oci-inc=/usr/include/oracle/19.17/client64" /tmp/ROracle_1.3-1.1.tar.gz\
-  && sudo chown -R shiny:shiny /srv/shiny-server/kinome-tree
+  && sudo chown -R shiny:shiny /srv/shiny-server/kinome-tree\
+  && sudo mkdir -p /home/shiny/lib/ojdbc8\
+  && sudo mv /tmp/ojdbc8.jar /home/shiny/lib/ojdbc8
 
 USER shiny
