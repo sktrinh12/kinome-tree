@@ -1,1 +1,1 @@
-.libPaths("/usr/lib/R/addn-lib")
+source("renv/activate.R")
