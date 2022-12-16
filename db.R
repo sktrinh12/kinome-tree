@@ -15,9 +15,6 @@ if (Sys.info()[["sysname"]] == "Linux") {
 ojdbc_fp <- file.path(root_path, username, "lib/ojdbc8")
 ojdbc_jarfile <- file.path(ojdbc_fp, "ojdbc8.jar")
 
-# parse access param file
-access_file <- file.path(ojdbc_fp, "oracle")
-access_file <- file(access_file, open = "r")
 
 read_acess_values <- function(access_file) {
   ls_vars <- list()
@@ -37,14 +34,16 @@ jdbcDriver <-
 
 if (root_path == "/home") {
 				ls_vars <- list(
-								host=Sys.getenv('HOSTNAME')
+								host=Sys.getenv('HOSTNAME'),
 								port=Sys.getenv('PORT'),
 								sid=Sys.getenv('SID'),
 								username_userdata=Sys.getenv('USERNAME'),
 								password_userdata=Sys.getenv('PASSWORD')
 				)
-
 } else {
+				# parse access param file
+				access_file <- file.path(ojdbc_fp, "oracle")
+				access_file <- file(access_file, open = "r")
 				ls_vars <- read_acess_values(access_file)
 }
 
