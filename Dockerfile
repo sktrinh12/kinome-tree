@@ -43,8 +43,7 @@ RUN git clone https://github.com/sktrinh12/kinome-tree.git
 
 RUN sudo R CMD javareconf JAVA_HOME="/usr/lib/jvm/java-8-openjdk-amd64/"
 
-RUN cd kinome-tree && Rscript -e 'renv::restore()'\
-  && Rscript -e 'install.packages(c("DBI", "rJava", "RJDBC"))'
+RUN cd kinome-tree && Rscript -e 'install_packages.R'
 
 RUN sudo R CMD INSTALL\
   --configure-args="--with-oci-lib=/usr/lib/oracle/19.17/client64/lib --with-oci-inc=/usr/include/oracle/19.17/client64" /tmp/ROracle_1.3-1.1.tar.gz\
