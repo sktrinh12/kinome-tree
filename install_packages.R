@@ -1,0 +1,22 @@
+
+install.packages(c("DBI",
+								"rJava",
+								"RJDBC",
+								"tidyr",
+								"readxl",
+								"writexl",
+								"data.table",
+								"stringr",
+								"dplyr",
+								"shiny",
+								"shinydashboard",
+								"shinyBS",
+								"readr",
+								"rsvg",
+								"shinyWidgets",
+								"shinycssloaders",
+								"svgPanZoom",
+								"colourpicker",
+								"DT"
+								)
+)
