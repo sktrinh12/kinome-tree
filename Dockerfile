@@ -1,5 +1,17 @@
 FROM rocker/shiny
 
+ARG HOSTNAME
+ARG PORT
+ARG SID
+ARG USERNAME
+ARG PASSWORD
+
+ENV HOSTNAME=$HOSTNAME
+ENV PORT=$PORT
+ENV SID=$SID
+ENV USERNAME=$USERNAME
+ENV PASSWORD=$PASSWORD
+
 RUN apt-get update && apt-get install -y \
     libcurl4-openssl-dev\
     libssl-dev\
