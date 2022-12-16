@@ -35,7 +35,18 @@ read_acess_values <- function(access_file) {
 jdbcDriver <-
   JDBC(driverClass = "oracle.jdbc.OracleDriver", classPath = ojdbc_jarfile)
 
-ls_vars <- read_acess_values(access_file)
+if (root_path == "/home") {
+				ls_vars <- list(
+								host=Sys.getenv('HOSTNAME')
+								port=Sys.getenv('PORT'),
+								sid=Sys.getenv('SID'),
+								username_userdata=Sys.getenv('USERNAME'),
+								password_userdata=Sys.getenv('PASSWORD')
+				)
+
+} else {
+				ls_vars <- read_acess_values(access_file)
+}
 
 connect_string <-
   paste0("jdbc:oracle:thin:@",
@@ -45,7 +56,9 @@ connect_string <-
          ":",
          ls_vars$sid)
 
-print(connect_string)
+if (root_path == '/Users') {
+				print(connect_string)
+}
 
 # userdata schema connection
 conn <-
