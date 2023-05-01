@@ -5,3 +5,4 @@ tempfiles
 *RData
 .Rhistory
 renv
+test*
