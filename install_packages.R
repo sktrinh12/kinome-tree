@@ -17,6 +17,7 @@ install.packages(c("DBI",
 								"shinycssloaders",
 								"svgPanZoom",
 								"colourpicker",
-								"DT"
+								"DT",
+								"here"
 								)
 )
