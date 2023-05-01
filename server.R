@@ -373,10 +373,10 @@ server <- function(input, output, session) {
   output$plot1 <- renderSvgPanZoom({
     # recolor the official matrix
     df_data = newdf()
-    
-    if (dim(df_data[[1]])[1] == 0) {
-      stop("Error - no data retrieved based on given constraints")
-    }
+
+    validate(
+      need(!is.null(df_data) && nrow(df_data) == 0, "Error - no data retrieved based on given constraints")
+    )
     
     # join to get the Result column
     svginfo$dataframe = df_data[[1]] %>%
