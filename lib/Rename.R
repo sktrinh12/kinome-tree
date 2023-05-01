@@ -1,5 +1,5 @@
-source(here::here("lib/Cofactors.R"))
-source(here::here("lib/Coexpressions.R"))
+source("lib/Cofactors.R")
+source("lib/Coexpressions.R")
 
 # regex string generator to find partial matches
 get_match_indices <- function(ls_sp1, ls_sp2, match_values, i) {
@@ -316,8 +316,9 @@ clean_kinase_data <-
     
     # Keep just a few columns.
     kinome_data <- renamed %>%
-      select(SYMBOL, Just_Kinase, Result) %>%
-      mutate(HGNC_SYMBOL = SYMBOL, CRO_Kinase = Just_Kinase) %>%
+      select(SYMBOL, Just_Kinase, No_Space, Result) %>%
+      mutate(HGNC_SYMBOL = SYMBOL, CRO_Kinase = No_Space) %>%
+      select(-No_Space) %>%
       arrange(HGNC_SYMBOL)
     
     # Tag each result with a bin value.
