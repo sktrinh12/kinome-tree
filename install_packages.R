@@ -1,4 +1,3 @@
-
 install.packages(c("DBI",
 								"rJava",
 								"RJDBC",
@@ -18,6 +17,5 @@ install.packages(c("DBI",
 								"svgPanZoom",
 								"colourpicker",
 								"DT",
-								"here"
 								)
 )
