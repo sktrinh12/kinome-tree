@@ -1,4 +1,5 @@
-
+source(here::here("lib/Cofactors.R"))
+source(here::here("lib/Coexpressions.R"))
 
 # regex string generator to find partial matches
 get_match_indices <- function(ls_sp1, ls_sp2, match_values, i) {
@@ -118,20 +119,31 @@ clean_kinase_data <-
     
     reactive_data$ht <- HGNC %>%
       select(SYMBOL_UPPER, HGNC_ID, SYMBOL)
-    
-    
+
+
     df <- kinasedata %>%
       # arrange(Kinase) %>%
       filter(
         !grepl(pattern = "\\[", x = Kinase),
+        # !grepl(pattern = "_", x = Kinase),
         !grepl(
           pattern = "^(?!.*\\/).*\\(.*\\)$",
           x = Kinase,
           perl = T
-        )
-      ) %>%
-      # !grepl(pattern = '/', x = Kinase), !grepl(pattern = '-', x = Kinase))
-      # %>%
+        )) %>%
+      # mutate(Kinase = ifelse(Kinase %in% cofactors, strsplit(Kinase, "-")[[1]][1], Kinase)) %>%
+      mutate(Kinase = ifelse(Kinase %in% cofactors, str_replace(Kinase, "-", "_"), Kinase))
+
+    # check for co-expressions
+    df_subset_coexp <- df %>% filter(grepl(paste(coexpressions, collapse = "|"), Kinase)) %>%
+      separate_rows(Kinase, sep = '-') %>%
+      distinct(Result, Kinase, .keep_all = T)
+
+    if (nrow(df_subset_coexp) > 0) {
+      df <- bind_rows(df_subset_coexp, df %>% filter(!grepl(pattern = '-', x = Kinase)))
+    }
+
+    df <- df %>%
       mutate(
         No_Greek = case_when(
           grepl(pattern = "α", Kinase) ~ gsub("α", "A", Kinase),
@@ -377,6 +389,7 @@ clean_kinase_data <-
       
     }
     
+    # write.csv(df, '/Users/spencer.trinhkinnate.com/Downloads/output.csv')
     return(kinome_data)
   }
 
