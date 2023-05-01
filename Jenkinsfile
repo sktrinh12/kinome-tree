@@ -1,4 +1,3 @@
-apps = ['frontend', 'backend']
 pipeline {
     agent { 
         kubernetes{
@@ -40,7 +39,7 @@ pipeline {
 
         stage('docker build shiny app') {
             steps{
-               sh( label: 'Docker Build Backend', script:
+               sh( label: 'Docker Build', script:
                '''
                 #!/bin/bash
                 set -x
@@ -52,7 +51,7 @@ pipeline {
                 --build-arg SID=${ORACLE_SID} \
                 --build-arg USERNAME=${ORACLE_USER} \
                 --build-arg PASSWORD=${ORACLE_PASS} \
-                -f backend/Dockerfile.prod .
+                .
                 ''', returnStdout: true
                 )
                 
@@ -104,7 +103,7 @@ pipeline {
                   cd helm-basic-app-chart
                   helm install k8sapp-$APP_NAME . --namespace $NAMESPACE --set service.namespace=$NAMESPACE \
                   --set service.port=80 --set nameOverride=$APP_NAME \
-                  --set fullnameOverride=$APP_NAME-backend --set namespace=${NAMESPACE} \
+                  --set fullnameOverride=$APP_NAME --set namespace=${NAMESPACE} \
                   --set image.repository=${AWSID}.dkr.ecr.us-west-2.amazonaws.com/$APP_NAME \
                   --set image.tag=latest --set containers.name=shiny \
                   --set containers.ports.containerPort=80 --set app=$APP_NAME \
@@ -120,7 +119,7 @@ pipeline {
     stage ('purge ecr untagged images') {
             steps {
                 withCredentials([aws(credentialsId: 'awscredentials', region: 'us-west-2')]) {
-                    loop_ecr_purge(apps)
+                    loop_ecr_purge()
                 }
             }
         }
@@ -129,16 +128,16 @@ pipeline {
     }
 }
 
-def loop_ecr_purge(list) {
+def loop_ecr_purge() {
     for (int i = 0; i < list.size(); i++) {
         sh """aws ecr list-images \
-        --repository-name $APP_NAME-${list[i]} \
+        --repository-name $APP_NAME \
         --filter 'tagStatus=UNTAGGED' \
         --query 'imageIds[].imageDigest' \
         --output json \
         | jq -r '.[]' \
         | xargs -I{} aws ecr batch-delete-image \
-        --repository-name $APP_NAME-${list[i]} \
+        --repository-name $APP_NAME \
         --image-ids imageDigest={} 
         """
         sh 'sleep 1'
