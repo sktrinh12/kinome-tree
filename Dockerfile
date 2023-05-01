@@ -11,7 +11,7 @@ RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E298A3A825C0D65DFD5
 
 RUN apt-get install -y\
     r-base\
-		sudo\
+    sudo\
     libcurl4-openssl-dev\
     libssl-dev\
     libxml2-dev\
@@ -22,7 +22,7 @@ RUN apt-get install -y\
     libaio1\
     openjdk-8-jdk\
     openjdk-8-jre\
-		vim
+    vim
 
 RUN useradd -ms /bin/bash shiny 
 
@@ -36,17 +36,13 @@ RUN curl -LJO "https://download.oracle.com/otn_software/linux/instantclient/1917
 RUN sudo alien -i oracle-instantclient19.17-devel-19.17.0.0.0-1.x86_64.rpm\
   && sudo alien -i oracle-instantclient19.17-basiclite-19.17.0.0.0-1.x86_64.rpm 
 
-RUN Rscript -e "install.packages('remotes', repos = c(CRAN = 'https://cloud.r-project.org'))"\
-  && Rscript -e "remotes::install_github('rstudio/renv')"
+COPY ./ /home/shiny/app/
 
 WORKDIR /home/shiny/app
 
-RUN git clone https://github.com/sktrinh12/kinome-tree.git
-
 RUN sudo R CMD javareconf JAVA_HOME="/usr/lib/jvm/java-8-openjdk-amd64/"
 
-RUN cd kinome-tree && Rscript -e 'renv::restore()'\
-  && Rscript -e 'install.packages(c("DBI", "rJava", "RJDBC"))'
+RUN Rscript install_packages.R
 
 RUN sudo R CMD INSTALL\
   --configure-args="--with-oci-lib=/usr/lib/oracle/19.17/client64/lib --with-oci-inc=/usr/include/oracle/19.17/client64" /tmp/ROracle_1.3-1.1.tar.gz\
@@ -68,4 +64,6 @@ ENV SID=$SID
 ENV USERNAME=$USERNAME
 ENV PASSWORD=$PASSWORD
 
-CMD ["R", "-e", "shiny::runApp('/home/shiny/app/kinome-tree', host= '0.0.0.0', port = 3838)"]
+EXPOSE 80
+
+CMD ["R", "-e", "shiny::runApp('/home/shiny/app/kinome-tree', host= '0.0.0.0', port = 80)"]
