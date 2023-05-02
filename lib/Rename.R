@@ -125,7 +125,7 @@ clean_kinase_data <-
       # arrange(Kinase) %>%
       filter(
         !grepl(pattern = "\\[", x = Kinase),
-        # !grepl(pattern = "_", x = Kinase),
+        !grepl(pattern = "_", x = Kinase),
         !grepl(
           pattern = "^(?!.*\\/).*\\(.*\\)$",
           x = Kinase,
