@@ -1,3 +1,4 @@
+blank = ['nothing']
 pipeline {
     agent { 
         kubernetes{
@@ -119,7 +120,7 @@ pipeline {
     stage ('purge ecr untagged images') {
             steps {
                 withCredentials([aws(credentialsId: 'awscredentials', region: 'us-west-2')]) {
-                    loop_ecr_purge()
+                    loop_ecr_purge(blank)
                 }
             }
         }
@@ -128,7 +129,7 @@ pipeline {
     }
 }
 
-def loop_ecr_purge() {
+def loop_ecr_purge(list) {
     for (int i = 0; i < list.size(); i++) {
         sh """aws ecr list-images \
         --repository-name $APP_NAME \
