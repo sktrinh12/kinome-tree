@@ -375,7 +375,7 @@ server <- function(input, output, session) {
     df_data = newdf()
 
     validate(
-      need(!is.null(df_data) && nrow(df_data) == 0, "Error - no data retrieved based on given constraints")
+      need(!is.null(df_data) && nrow(df_data) > 0, "Error - no data retrieved based on given constraints")
     )
     
     # join to get the Result column
