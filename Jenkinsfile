@@ -1,3 +1,4 @@
+blank = ['nothing']
 pipeline {
     agent { 
         kubernetes{
@@ -16,7 +17,7 @@ pipeline {
         ORACLE_USER = credentials('ORACLE_USER')
         ORACLE_PASS = credentials('ORACLE_PASS')
         NAMESPACE = 'apps'
-        APP_NAME = 'kinome-tree'
+        APP_NAME = 'kinome-tree-dev'
         AWS_PAGER = ''
     }
 
@@ -58,17 +59,17 @@ pipeline {
         }
         
 
-        /* stage('docker push shiny app to ecr') { */
-        /*   steps { */
-        /*         sh(label: 'ECR docker push backend', script: */
-        /*         ''' */
-        /*         #!/bin/bash */
-        /*         set -x */
-        /*         docker push $AWSID.dkr.ecr.us-west-2.amazonaws.com/$APP_NAME:latest */
-        /*         ''', returnStdout: true */
-        /*         ) */
-        /*     } */
-        /* } */
+        stage('docker push shiny app to ecr') {
+          steps {
+                sh(label: 'ECR docker push backend', script:
+                '''
+                #!/bin/bash
+                set -x
+                docker push $AWSID.dkr.ecr.us-west-2.amazonaws.com/$APP_NAME:latest
+                ''', returnStdout: true
+                )
+            }
+        }
         
         stage('deploy') {
                 agent {
@@ -93,19 +94,19 @@ pipeline {
                 set -x
                 curl -LO https://storage.googleapis.com/kubernetes-release/release/\$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
                 chmod +x ./kubectl
-                if ./kubectl get pod -n $NAMESPACE -l app=$APP_NAME-dev | grep -q $APP_NAME-dev; then
-                  echo "$APP_NAME-dev pods already exists"
-                  ./kubectl rollout restart deploy/$APP_NAME-dev-deploy -n $NAMESPACE
+                if ./kubectl get pod -n $NAMESPACE -l app=$APP_NAME | grep -q $APP_NAME; then
+                  echo "$APP_NAME pods already exists"
+                  ./kubectl rollout restart deploy/$APP_NAME-deploy -n $NAMESPACE
                 else
-                  echo "pods $APP_NAME-dev do not exist; deploy using helm"
+                  echo "pods $APP_NAME do not exist; deploy using helm"
                   git clone https://github.com/sktrinh12/helm-basic-app-chart.git
                   cd helm-basic-app-chart
-                  helm install k8sapp-$APP_NAME-dev . --namespace $NAMESPACE --set service.namespace=$NAMESPACE \
-                  --set service.port=80 --set nameOverride=$APP_NAME-dev \
-                  --set fullnameOverride=$APP_NAME-dev --set namespace=${NAMESPACE} \
+                  helm install k8sapp-$APP_NAME . --namespace $NAMESPACE --set service.namespace=$NAMESPACE \
+                  --set service.port=80 --set nameOverride=$APP_NAME \
+                  --set fullnameOverride=$APP_NAME --set namespace=${NAMESPACE} \
                   --set image.repository=${AWSID}.dkr.ecr.us-west-2.amazonaws.com/$APP_NAME \
                   --set image.tag=latest --set containers.name=shiny \
-                  --set containers.ports.containerPort=80 --set app=$APP_NAME-dev \
+                  --set containers.ports.containerPort=80 --set app=$APP_NAME \
                   --set terminationGracePeriodSeconds=10 \
                   --set ingress.enabled=false --set service.type=ClusterIP
                 fi
@@ -115,13 +116,13 @@ pipeline {
         }
     }
     
-    /* stage ('purge ecr untagged images') { */
-    /*         steps { */
-    /*             withCredentials([aws(credentialsId: 'awscredentials', region: 'us-west-2')]) { */
-    /*                 loop_ecr_purge(blank) */
-    /*             } */
-    /*         } */
-    /*     } */
+    stage ('purge ecr untagged images') {
+            steps {
+                withCredentials([aws(credentialsId: 'awscredentials', region: 'us-west-2')]) {
+                    loop_ecr_purge(blank)
+                }
+            }
+        }
         
     
     }
