@@ -11,7 +11,6 @@ pipeline {
         AWSID = credentials('AWSID')
         DOCKER_PSW = credentials('DOCKER_PASSWORD')
         DOCKER_CONFIG = "${WORKSPACE}/docker.config"
-        ORACLE_HOST = 'dotoradb-2022-dev.fount'
         ORACLE_PORT = 1521
         ORACLE_SID = credentials('ORACLE_SID')
         ORACLE_USER = credentials('ORACLE_USER')
@@ -46,7 +45,7 @@ pipeline {
                 docker build \
                 --no-cache --network=host \
                 -t ${AWSID}.dkr.ecr.us-west-2.amazonaws.com/$APP_NAME:latest \
-                --build-arg HOSTNAME=${ORACLE_HOST} \
+                --build-arg HOSTNAME=dotoradb-2022-dev.fount \
                 --build-arg PORT=${ORACLE_PORT} \
                 --build-arg SID=${ORACLE_SID} \
                 --build-arg USERNAME=${ORACLE_USER} \
