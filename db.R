@@ -55,9 +55,7 @@ connect_string <-
          ":",
          ls_vars$sid)
 
-if (root_path == '/Users') {
-				print(connect_string)
-}
+print(connect_string)
 
 # userdata schema connection
 conn <-
