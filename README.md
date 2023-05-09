@@ -69,4 +69,5 @@ self-contained within its own environment.~~
 `install.package()` command was used for each and every package. A
 `Jenkinsfile` was generated which allows for a fully automated build pipeline.
 the helm chart name is `k8sapps-kinome-tree`. Application can be reached at
-[http://kinome.kinnate](http://kinome.kinnate).
+[http://kinome.kinnate](http://kinome.kinnate). The development version is
+deployed on [http://kinome-dev.kinnate](http://kinome-dev.kinnate).
