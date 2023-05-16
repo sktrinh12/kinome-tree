@@ -5,6 +5,9 @@ pipeline {
             inheritFrom 'jenkins-slave'
         }
     }
+    parameters {
+        string(defaultValue: '0.1', description: 'Version number', name: 'VERSION_NUMBER')
+    }
     options {
         timeout(time: 45, unit: 'MINUTES')
     }
@@ -52,6 +55,8 @@ pipeline {
                 --build-arg SID=${ORACLE_SID} \
                 --build-arg USERNAME=${ORACLE_USER} \
                 --build-arg PASSWORD=${ORACLE_PASS} \
+                --build-arg VERSION_NUMBER=${VERSION_NUMBER} \
+                --build-arg ENVIRONMENT=PROD \
                 .
                 ''', returnStdout: true
                 )
