@@ -4,9 +4,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update
 
-COPY ./ /home/shiny/app/
-
 WORKDIR /home/shiny/app
+
+COPY ./ .
 
 # RUN mv nginx.conf /etc/nginx/nginx.conf
 
@@ -32,4 +32,4 @@ ENV PASSWORD=$PASSWORD
 
 EXPOSE 80
 
-CMD ["R",  "-e", "shiny::runApp('home/shiny/app', host='0.0.0.0', port=80)"]
+CMD ["R",  "-e", "shiny::runApp('/home/shiny/app', host='0.0.0.0', port=80)"]
