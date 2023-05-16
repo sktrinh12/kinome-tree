@@ -21,10 +21,16 @@ source("db.R")
 source("coralR/writekinasetree.R")
 source("coralR/colorby.R")
 
+version <- ifelse(Sys.getenv("VERSION_NUMBER") == "", "1.0.0", Sys.getenv("VERSION_NUMBER"))
+environment <- ifelse(Sys.getenv("ENVIRONMENT") == "", "DEV", Sys.getenv("ENVIRONMENT"))
+
+
 ui <-
   dashboardPage(
     skin = "blue",
-    dashboardHeader(title = "Kinome Tree"),
+    dashboardHeader(title = "Kinome Tree",     
+    tags$li(class = "dropdown", style = "padding: 15px 5px;", HTML(paste0(environment,"_v", version)))
+    ),
     dashboardSidebar(sidebarMenu(
       menuItem("Data",
                tabName = "data", icon = icon("table")),
