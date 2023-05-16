@@ -1,5 +1,9 @@
 FROM 352353521492.dkr.ecr.us-west-2.amazonaws.com/rshiny-oracle:latest
 
+ARG VERSION_NUMBER
+ARG ENVIRONMENT 
+ENV VERSION_NUMBER=$VERSION_NUMBER
+ENV ENVIRONMENT=$ENVIRONMENT
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update
