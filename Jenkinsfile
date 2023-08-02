@@ -114,6 +114,7 @@ pipeline {
                   --set image.tag=latest --set containers.name=shiny \
                   --set containers.ports.containerPort=80 --set app=$APP_NAME \
                   --set terminationGracePeriodSeconds=10 \
+									--set resources.limits.cpu=200m,resources.limits.memory=256Mi,resources.requests.cpu=200m,resources.requests.memory=256Mi \
                   --set ingress.enabled=false --set service.type=ClusterIP
                 fi
                 '''
